@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html class="dark" lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AION Repair OS V7.0</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body class="bg-background text-on-surface h-screen flex flex-col overflow-hidden">
+
+<header class="flex-none bg-surface-container-lowest/80 border-b border-outline-variant p-4 flex justify-between items-center">
+    <h1 class="text-xl font-black text-primary italic tracking-tighter">AION REPAIR OS V7.0</h1>
+    <div id="device-status" class="text-sm font-mono text-secondary">Aguardando dispositivo...</div>
+</header>
+
+<main class="flex-grow flex overflow-hidden">
+    <!-- Sensors Column -->
+    <aside class="w-64 border-r border-outline-variant p-4 overflow-y-auto hidden md:block">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4">Telemetria</h2>
+        <div id="sensor-list" class="space-y-3">
+            <!-- Sensors inserted via JS -->
+        </div>
+    </aside>
+
+    <!-- Chat Area -->
+    <section class="flex-grow flex flex-col p-4 bg-surface-container-low">
+        <div id="ai-chat-area" class="flex-grow overflow-y-auto mb-4 space-y-4"></div>
+        <div class="flex gap-2">
+            <input id="chat-input" type="text" class="flex-grow bg-surface-container-highest border-none rounded-lg p-3 text-sm" placeholder="Comande a IA...">
+            <button onclick="sendMessage()" class="bg-primary text-background px-6 py-2 rounded-lg font-bold">Enviar</button>
+        </div>
+    </section>
+
+    <!-- Console Column -->
+    <aside class="w-80 border-l border-outline-variant p-4 overflow-y-auto hidden lg:block">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4">Console ADB</h2>
+        <div id="adb-stream" class="font-mono text-[10px] text-on-surface-variant space-y-1"></div>
+    </aside>
+</main>
+
+<footer class="flex-none p-2 text-center text-[10px] text-on-surface-variant border-t border-outline-variant">
+    AION-CORE OPERACIONAL | <span id="status-footer">Status inicializando...</span>
+</footer>
+
+<script>
+    const state = { deviceConnected: false };
+    
+    function sendMessage() {
+        const input = document.getElementById('chat-input');
+        const message = input.value.trim();
+        if(!message) return;
+        addUserMessage(message);
+        input.value = '';
+        fetch('/api/chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({message}) })
+            .then(r => r.json())
+            .then(data => addAiMessage(data.response))
+            .catch(e => addAiMessage('Erro: ' + e.message));
+    }
+
+    function addUserMessage(text) {
+        const area = document.getElementById('ai-chat-area');
+        area.innerHTML += `<div class="text-right"><span class="bg-primary/20 p-2 rounded">${escapeHtml(text)}</span></div>`;
+    }
+
+    function addAiMessage(text) {
+        const area = document.getElementById('ai-chat-area');
+        area.innerHTML += `<div class="text-left"><span class="bg-secondary/20 p-2 rounded">${escapeHtml(text)}</span></div>`;
+        area.scrollTop = area.scrollHeight;
+    }
+
+    function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+    function updateSensors(d) {
+        const container = document.getElementById('sensor-list');
+        container.innerHTML = Object.entries(d).map(([k, v]) => `
+            <div class="flex justify-between">
+                <span class="text-xs text-on-surface-variant uppercase">${k}</span>
+                <span class="text-xs font-mono font-bold">${typeof v === 'object' ? v.level : v}</span>
+            </div>
+        `).join('');
+    }
+
+    async function checkStatus() {
+        try {
+            const res = await fetch('/api/status');
+            const data = await res.json();
+            document.getElementById('status-footer').textContent = 'Backend: ONLINE | AI: ' + data.aiMode;
+            if (data.device && data.device.model) {
+                state.deviceConnected = true;
+                document.getElementById('device-status').textContent = data.device.model;
+            }
+        } catch(e) {
+            document.getElementById('status-footer').textContent = 'Backend: OFFLINE';
+        }
+    }
+
+    setInterval(() => {
+        checkStatus();
+        fetch('/api/sensors').then(r=>r.json()).then(updateSensors).catch(()=>{});
+    }, 2000);
+    checkStatus();
+</script>
+</body>
+</html>

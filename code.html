@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Silicon Onyx | AION Repair OS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&amp;family=JetBrains+Mono:wght@400;500&amp;family=Space+Grotesk:wght@300;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-on-surface": "#313030",
+                        "outline-variant": "#454652",
+                        "on-background": "#e5e2e1",
+                        "surface-dim": "#131313",
+                        "surface-container-low": "#1c1b1b",
+                        "surface-variant": "#353534",
+                        "primary-container": "#5e6ad2",
+                        "on-surface": "#e5e2e1",
+                        "on-error": "#690005",
+                        "tertiary-fixed": "#e5e2e1",
+                        "on-primary-fixed": "#000965",
+                        "primary": "#bdc2ff",
+                        "secondary-fixed": "#4dfdd3",
+                        "error-container": "#93000a",
+                        "on-secondary-container": "#005a48",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-primary-container": "#fdfaff",
+                        "inverse-primary": "#4854bb",
+                        "on-secondary": "#00382c",
+                        "surface-bright": "#3a3939",
+                        "on-tertiary-fixed-variant": "#474746",
+                        "on-surface-variant": "#c6c5d5",
+                        "on-tertiary": "#313030",
+                        "surface": "#131313",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-container": "#201f1f",
+                        "secondary": "#44f7cd",
+                        "error": "#ffb4ab",
+                        "surface-tint": "#bdc2ff",
+                        "surface-container-highest": "#353534",
+                        "tertiary-fixed-dim": "#c8c6c5",
+                        "primary-fixed-dim": "#bdc2ff",
+                        "secondary-fixed-dim": "#13e0b7",
+                        "tertiary-container": "#747373",
+                        "surface-container-high": "#2a2a2a",
+                        "secondary-container": "#00dab2",
+                        "on-primary-fixed-variant": "#2e3aa2",
+                        "on-error-container": "#ffdad6",
+                        "outline": "#908f9e",
+                        "on-primary": "#121f8b",
+                        "on-tertiary-fixed": "#1c1b1b",
+                        "on-tertiary-container": "#fdfaf9",
+                        "background": "#131313",
+                        "primary-fixed": "#dfe0ff",
+                        "on-secondary-fixed": "#002019",
+                        "on-secondary-fixed-variant": "#005141",
+                        "tertiary": "#c8c6c5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"],
+                        "mono": ["JetBrains Mono"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .neon-pulse {
+            box-shadow: 0 0 15px rgba(68, 247, 205, 0.3);
+        }
+        .glass-panel {
+            background: rgba(42, 42, 42, 0.4);
+            backdrop-filter: blur(20px);
+        }
+        .mesh-overlay {
+            background-image: radial-gradient(circle at center, transparent 0%, rgba(68, 247, 205, 0.05) 100%), 
+                              repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(68, 247, 205, 0.03) 1px, rgba(68, 247, 205, 0.03) 2px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#131313] border-b border-[#454652]/15 flex justify-between items-center px-6 py-3 w-full">
+<div class="flex items-center gap-6">
+<span class="text-xl font-black tracking-tighter text-[#BDC2FF] font-['Inter'] uppercase">Silicon Onyx</span>
+<div class="hidden md:flex gap-8 items-center h-full">
+<a class="text-[#BDC2FF] border-b-2 border-[#BDC2FF] font-['Inter'] tracking-tighter font-bold uppercase py-1" href="#">Diagnostics</a>
+<a class="text-[#A8AAB4] font-['Inter'] tracking-tighter font-bold uppercase hover:bg-[#1C1B1B] hover:text-white transition-colors py-1" href="#">Logs de Auditoria</a>
+<a class="text-[#A8AAB4] font-['Inter'] tracking-tighter font-bold uppercase hover:bg-[#1C1B1B] hover:text-white transition-colors py-1" href="#">Frota de Dispositivos</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#BDC2FF] scale-95 active:opacity-80 transition-all duration-150 cursor-pointer">settings_input_component</span>
+<span class="material-symbols-outlined text-[#BDC2FF] scale-95 active:opacity-80 transition-all duration-150 cursor-pointer">terminal</span>
+<span class="material-symbols-outlined text-[#BDC2FF] scale-95 active:opacity-80 transition-all duration-150 cursor-pointer">notifications</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30">
+<img alt="Chief Technician Profile" data-alt="Close-up of a high-tech robotic iris with glowing blue and purple circuitry highlights, professional tech portrait style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNtSiiIUhyoRwEcTKnNL73SGm1b9Mym2w_ohptnrSouBXKMu4qQHYwDUAPD3orCQWi9Ovh-fv1qzYkaEZSO7GmMrjuZVnchoLaJzZndKR2mxMpWcsBNkyH8v1Jn2B9Sc8HB-ZAX7OeYJq-x_wHa_TSYUldrZkJOB33W1G9wyr_gb_mA6jok9RrqlRMplmY9T61SC7Js14pbj8ke4bkUXZpHfTh0tc80fKFO-vZ5L4QGOOYrKf7Lt78bnLdC9-gv4E26OIOLfP_Wgg"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-64 z-40 bg-[#1C1B1B] border-r border-[#454652]/15 flex flex-col h-screen pt-20 pb-8 px-4 hidden lg:flex">
+<div class="mb-10 px-2">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary">android_fingerprint</span>
+</div>
+<div>
+<div class="text-white font-bold font-['Space_Grotesk'] text-sm">Tech_Admin_01</div>
+<div class="text-[#A8AAB4] text-[10px] uppercase tracking-widest font-['Space_Grotesk']">Root Access Level</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-2 flex-grow">
+<div class="bg-[#2A2A2A] text-[#BDC2FF] border-l-4 border-[#5E6AD2] px-4 py-3 flex items-center gap-3 font-['Space_Grotesk'] text-xs font-medium uppercase tracking-widest translate-x-1 duration-200 cursor-pointer">
+<span class="material-symbols-outlined">android_fingerprint</span>
+<span>Diagnostics</span>
+</div>
+<div class="text-[#A8AAB4] opacity-70 px-4 py-3 flex items-center gap-3 font-['Space_Grotesk'] text-xs font-medium uppercase tracking-widest hover:bg-[#2A2A2A] hover:text-[#BDC2FF] transition-all cursor-pointer">
+<span class="material-symbols-outlined">database</span>
+<span>Audit Logs</span>
+</div>
+<div class="text-[#A8AAB4] opacity-70 px-4 py-3 flex items-center gap-3 font-['Space_Grotesk'] text-xs font-medium uppercase tracking-widest hover:bg-[#2A2A2A] hover:text-[#BDC2FF] transition-all cursor-pointer">
+<span class="material-symbols-outlined">devices_other</span>
+<span>Device Fleet</span>
+</div>
+<div class="text-[#A8AAB4] opacity-70 px-4 py-3 flex items-center gap-3 font-['Space_Grotesk'] text-xs font-medium uppercase tracking-widest hover:bg-[#2A2A2A] hover:text-[#BDC2FF] transition-all cursor-pointer">
+<span class="material-symbols-outlined">shield_lock</span>
+<span>Security Matrix</span>
+</div>
+<div class="text-[#A8AAB4] opacity-70 px-4 py-3 flex items-center gap-3 font-['Space_Grotesk'] text-xs font-medium uppercase tracking-widest hover:bg-[#2A2A2A] hover:text-[#BDC2FF] transition-all cursor-pointer">
+<span class="material-symbols-outlined">monitoring</span>
+<span>System Health</span>
+</div>
+</div>
+<div class="mt-auto flex flex-col gap-2 border-t border-outline-variant/10 pt-6">
+<div class="px-4 py-2 flex items-center gap-3 text-[#A8AAB4] text-[10px] uppercase font-['Space_Grotesk'] hover:text-white cursor-pointer">
+<span class="material-symbols-outlined text-sm">menu_book</span>
+<span>Documentação</span>
+</div>
+<div class="px-4 py-2 flex items-center gap-3 text-[#A8AAB4] text-[10px] uppercase font-['Space_Grotesk'] hover:text-white cursor-pointer">
+<span class="material-symbols-outlined text-sm">contact_support</span>
+<span>Suporte</span>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="lg:ml-64 pt-20 pb-12 px-6 min-h-screen">
+<div class="grid grid-cols-12 gap-6 h-full">
+<!-- Left Panel: Thought Engine (AI Conversing) -->
+<section class="col-span-12 lg:col-span-3 space-y-6">
+<div class="glass-panel rounded-xl p-6 border-l-2 border-primary/40 h-[calc(100vh-220px)] flex flex-col">
+<div class="flex items-center gap-2 mb-6">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<h2 class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-bold">Motor de Pensamento</h2>
+</div>
+<div class="flex-grow overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+<div class="space-y-2">
+<div class="text-[10px] font-label text-primary font-bold uppercase tracking-tighter">AI_REPAIR_CORE // 09:42:01</div>
+<p class="text-sm text-on-surface leading-relaxed">Conexão estabelecida com sucesso via Kali Linux. Estou lendo os dados brutos do kernel agora. O que deseja que eu analise primeiro?</p>
+</div>
+<div class="space-y-2">
+<div class="text-[10px] font-label text-secondary font-bold uppercase tracking-tighter">AI_REPAIR_CORE // 09:42:15</div>
+<p class="text-sm text-on-surface leading-relaxed">Analisando o Kernel 'tensor-g2'. Notei uma flutuação térmica no cluster de alta performance. Recomendo realinhamento de voltagem preventivo.</p>
+</div>
+<div class="space-y-2">
+<div class="text-[10px] font-label text-primary font-bold uppercase tracking-tighter">AI_REPAIR_CORE // 09:43:05</div>
+<p class="text-sm text-on-surface leading-relaxed">Saúde da bateria em 91%. Ciclos de carga estáveis. Otimizando processos de fundo para reduzir o jitter de corrente.</p>
+</div>
+<div class="p-4 bg-surface-container-lowest rounded-lg border border-outline-variant/10">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-secondary text-sm">bolt</span>
+<span class="text-[10px] font-label text-on-surface-variant uppercase font-bold">Diagnóstico Ativo</span>
+</div>
+<div class="text-xs text-secondary font-mono">KERNEL_SYNC: ESTÁVEL</div>
+<div class="text-xs text-on-surface-variant font-mono mt-1">VOLTAGE_DROP: 0.02mV</div>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t border-outline-variant/10">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 bg-secondary rounded-full"></div>
+<span class="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">IA em Autonomia Total</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Center Panel: Device Mesh Visualizer -->
+<section class="col-span-12 lg:col-span-6 flex flex-col items-center justify-center relative min-h-[500px]">
+<div class="absolute inset-0 overflow-hidden pointer-events-none">
+<div class="mesh-overlay w-full h-full opacity-30"></div>
+</div>
+<!-- Sensor Array (Left) -->
+<div class="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col gap-8">
+<div class="flex items-center gap-3 group">
+<div class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center neon-pulse bg-secondary/5 group-hover:bg-secondary/20 transition-all">
+<span class="material-symbols-outlined text-secondary text-sm">thermostat</span>
+</div>
+<div class="text-[10px] font-mono text-secondary">38.4°C</div>
+</div>
+<div class="flex items-center gap-3 group">
+<div class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center neon-pulse bg-secondary/5">
+<span class="material-symbols-outlined text-secondary text-sm">memory</span>
+</div>
+<div class="text-[10px] font-mono text-secondary">CPU_0_HIGH</div>
+</div>
+<div class="flex items-center gap-3 group">
+<div class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center neon-pulse bg-secondary/5">
+<span class="material-symbols-outlined text-secondary text-sm">storage</span>
+</div>
+<div class="text-[10px] font-mono text-secondary">IO_SYNC_OK</div>
+</div>
+</div>
+<!-- Device Mockup with Neural Mesh -->
+<div class="relative w-64 h-[500px] bg-surface-container-lowest rounded-[3rem] border-[8px] border-surface-container-high shadow-2xl overflow-hidden">
+<div class="absolute top-0 w-full h-8 flex justify-center items-center">
+<div class="w-12 h-1 bg-surface-variant rounded-full"></div>
+</div>
+<!-- Screen Content -->
+<div class="w-full h-full bg-black flex flex-col items-center justify-center p-4">
+<div class="relative w-full h-full flex items-center justify-center">
+<div class="absolute inset-0 opacity-40">
+<svg class="w-full h-full stroke-[0.5] fill-none stroke-green-400" viewbox="0 0 100 100">
+<path d="M10 10 L90 90 M10 90 L90 10 M50 0 L50 100 M0 50 L100 50"></path>
+<circle class="animate-pulse" cx="50" cy="50" r="40"></circle>
+<circle cx="50" cy="50" r="20"></circle>
+</svg>
+</div>
+<div class="z-10 text-center">
+<div class="text-[10px] font-mono text-secondary mb-1">PIXEL 7 PRO</div>
+<div class="text-xl font-black text-white tracking-widest uppercase">LIVE</div>
+<div class="text-[8px] font-mono text-on-surface-variant mt-2 tracking-[0.3em]">SCANNING_HANDSHAKE</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sensor Array (Right) -->
+<div class="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-8 text-right">
+<div class="flex items-center justify-end gap-3 group">
+<div class="text-[10px] font-mono text-secondary">91%_BATT</div>
+<div class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center neon-pulse bg-secondary/5">
+<span class="material-symbols-outlined text-secondary text-sm">battery_charging_full</span>
+</div>
+</div>
+<div class="flex items-center justify-end gap-3 group">
+<div class="text-[10px] font-mono text-secondary">5G_UWB</div>
+<div class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center neon-pulse bg-secondary/5">
+<span class="material-symbols-outlined text-secondary text-sm">signal_cellular_alt</span>
+</div>
+</div>
+<div class="flex items-center justify-end gap-3 group">
+<div class="text-[10px] font-mono text-secondary">GPS_LOCKED</div>
+<div class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center neon-pulse bg-secondary/5">
+<span class="material-symbols-outlined text-secondary text-sm">location_on</span>
+</div>
+</div>
+</div>
+<div class="mt-8 text-center">
+<div class="text-2xl font-black text-white tracking-tighter uppercase font-headline">PIXEL 7 PRO (LIVE)</div>
+<div class="text-[10px] font-label text-secondary font-bold tracking-[0.5em] mt-1">HANDSHAKE_ESTABLISHED</div>
+</div>
+</section>
+<!-- Right Panel: ADB Console -->
+<section class="col-span-12 lg:col-span-3">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/15 h-[calc(100vh-220px)] flex flex-col overflow-hidden shadow-2xl">
+<div class="bg-surface-container-high px-4 py-2 flex items-center justify-between border-b border-outline-variant/10">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">terminal</span>
+<span class="text-[10px] font-mono font-bold text-on-surface-variant">ADB_CONSOLE_LIVE</span>
+</div>
+<div class="flex gap-1">
+<div class="w-2 h-2 rounded-full bg-error/40"></div>
+<div class="w-2 h-2 rounded-full bg-secondary/40"></div>
+</div>
+</div>
+<div class="p-4 flex-grow overflow-y-auto font-mono text-[11px] space-y-1 custom-scrollbar leading-tight">
+<div class="text-on-surface-variant">$ adb devices</div>
+<div class="text-secondary">List of devices attached:</div>
+<div class="text-secondary">28241FDF6000K2   device</div>
+<div class="text-on-surface-variant mt-2">$ adb shell getprop ro.product.model</div>
+<div class="text-white">Pixel 7 Pro</div>
+<div class="text-on-surface-variant mt-2">$ adb shell "cat /sys/class/thermal/thermal_zone*/temp"</div>
+<div class="text-secondary">38400, 37200, 39100, 38000</div>
+<div class="text-on-surface-variant mt-2">$ adb shell "dumpsys battery"</div>
+<div class="text-on-surface-variant">  status: 2</div>
+<div class="text-on-surface-variant">  health: 2</div>
+<div class="text-on-surface-variant">  present: true</div>
+<div class="text-secondary">  level: 91</div>
+<div class="text-on-surface-variant">  voltage: 4210</div>
+<div class="text-on-surface-variant mt-2">$ adb shell "top -n 1 -b"</div>
+<div class="text-on-surface-variant">  PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND</div>
+<div class="text-primary font-bold">  1248 system    20   0   4.2G  182M  112M S   4.3  1.5   0:12.45 system_server</div>
+<div class="text-on-surface-variant">  2391 u0_a124   20   0   2.1G   92M   54M S   1.2  0.8   0:04.12 com.google.android.apps</div>
+<div class="animate-pulse inline-block w-2 h-4 bg-secondary ml-1 mt-1"></div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Bottom Status Bar -->
+<footer class="fixed bottom-0 w-full bg-[#131313] border-t border-[#454652]/15 py-2 px-6 flex justify-between items-center z-50">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-label text-on-surface-variant uppercase font-bold tracking-widest">Sistema Operacional:</span>
+<span class="text-[10px] font-mono text-white bg-surface-container-high px-2 py-0.5 rounded">KALI LINUX</span>
+</div>
+<div class="h-4 w-px bg-outline-variant/30"></div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-label text-on-surface-variant uppercase font-bold tracking-widest">Status:</span>
+<span class="text-[10px] font-label text-secondary font-bold tracking-widest animate-pulse">CONNECTION: ESTABLISHED</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-mono text-on-surface-variant">CPU: 12%</span>
+<div class="w-12 h-1 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[12%]"></div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-mono text-on-surface-variant">RAM: 4.2GB</span>
+<div class="w-12 h-1 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[40%]"></div>
+</div>
+</div>
+<div class="text-[10px] font-mono text-on-surface-variant uppercase border border-outline-variant/20 px-2 py-0.5">V: 4.2.1-REPAIR</div>
+</div>
+</footer>
+<!-- FAB Suppression: Per prompt instructions, we exclude standard buttons to focus on AI autonomy -->
+<style>
+        /* Custom scrollbar for terminal feeling */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(189, 194, 255, 0.1);
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(189, 194, 255, 0.3);
+        }
+    </style>
+</body></html>

@@ -23,7 +23,7 @@ class AIONServer {
         this.autonomousEnabled = false;
         this.captureJobs = new Map();
 
-        this.port = 8081;
+        this.port = process.env.PORT || 3001;
         this._setupRoutes();
         this._setupWS();
         this._startTelemetry();
@@ -298,9 +298,14 @@ class AIONServer {
 
     start() {
         this.server.listen(this.port, () => {
-            console.log(`AION Repair OS V7.0 running on port ${this.port}`);
-            console.log(`Dashboard: http://localhost:${this.port}`);
-            console.log(`AI Mode: ${this.ai.offline ? 'OFFLINE (smart local)' : 'ONLINE (' + this.ai.model + ')'}`);
+            console.log('');
+            console.log('╔═══════════════════════════════════════════════════╗');
+            console.log('║         AION REPAIR OS V7.0 - MESTRE EXECUTOR    ║');
+            console.log('╠═══════════════════════════════════════════════════╣');
+            console.log(`║  Dashboard:  http://localhost:${this.port}                 ║`);
+            console.log(`║  AI Mode:    ${this.ai.offline ? 'OFFLINE (smart local)' : 'ONLINE (' + this.ai.model + ')'}   ║`);
+            console.log('╚═══════════════════════════════════════════════════╝');
+            console.log('');
         });
     }
 }

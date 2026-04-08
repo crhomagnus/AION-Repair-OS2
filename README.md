@@ -12,6 +12,7 @@ npm install
 
 ```bash
 npm start
+# Servidor disponível em http://localhost:3001
 ```
 
 ## Conectar Dispositivo Android
@@ -31,7 +32,7 @@ npm start
 
 ## WebSocket
 
-Conecte-se em `ws://localhost:8080` para streaming de telemetria em tempo real.
+Conecte-se em `ws://localhost:3001` para streaming de telemetria em tempo real.
 
 ### Mensagens:
 

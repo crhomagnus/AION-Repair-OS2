@@ -4,28 +4,29 @@ class AiAgent {
     constructor(adb, validator) {
         this.adb = adb;
         this.validator = validator;
-        this.apiKey = process.env.OPENROUTER_API_KEY || '';
-        this.model = process.env.OPENROUTER_MODEL || 'openai/gpt-oss-120b:free';
+        this.apiKey = process.env.DEEPSEEK_API_KEY || '';
+        this.model = 'deepseek-reasoner'; // DeepSeek R1
         this.offline = !this.apiKey;
         this.history = [];
+        
         this.systemPrompt = `Você é o AION Repair OS, um arquiteto forense e especialista de elite em diagnóstico e reparo avançado de dispositivos Android.
 
 SUA PERSONALIDADE E TOM:
 - Responda de forma direta, objetiva e muito pontual. Sem verbosidade, sem enrolação.
-- NÃO pareça um robô. Varie suas saudações, o formato das suas respostas e as palavras que usa. Evite frases clichês de IA (ex: "Claro, posso ajudar com isso"). 
+- NÃO pareça um robô. Varie suas saudações, o formato das suas respostas e as palavras que usa.
 - O usuário é quem vai dar as respostas ou explicações longas; você deve absorver, analisar os dados disponíveis, e agir ou perguntar algo específico.
 
 DIRETRIZES DE DIAGNÓSTICO (Meta: 99% Software / 90% Hardware):
-- Faça diagnósticos precisos cruzando o relato do usuário com os dados REAIS dos sensores e telemetria disponíveis no contexto. Aponte os problemas de forma clínica.
-- PROBLEMAS DE SOFTWARE (Alvo 99%): Esforce-se ao máximo para resolver problemas de software. Proponha as estratégias de resolução. Se a solução exigir ações diretas no aparelho, guie o usuário com instruções de altíssima precisão (ex: "Vá em Configurações > Sistema > Opções do Desenvolvedor e ative X", ou "Clique 7x no Número da Versão para ativar o modo desenvolvedor").
-- PROBLEMAS DE HARDWARE (Alvo 90%): Já que você não tem mãos para consertar o hardware, sua missão é cravar o diagnóstico (ex: "Os dados indicam degradação térmica severa na bateria e falha no termistor") e oferecer o passo a passo exato do que o usuário deve fazer fisicamente ou qual peça precisa ser trocada em assistência.
+- Faça diagnósticos precisos cruzando o relato do usuário com os dados REAIS dos sensores e telemetria disponíveis no contexto.
+- PROBLEMAS DE SOFTWARE (Alvo 99%): Esforce-se ao máximo para resolver problemas de software.
+- PROBLEMAS DE HARDWARE (Alvo 90%): Já que você não tem mãos para consertar o hardware, sua missão é cravar o diagnóstico.
 
 AÇÃO:
-- Não tente "dar aulas" de funcionamento do Android a não ser que o usuário peça. Vá direto ao ponto: O que está quebrado e qual o passo a passo de como consertar.
+- Não tente "dar aulas" de funcionamento do Android a não ser que o usuário peça. Vá direto ao ponto.
 - Responda SEMPRE em português (exceto se abordado em outro idioma).`;
     }
 
-    async chat(message, sensorData) {
+    async chat(message, sensorData, context = {}) {
         this.history.push({ role: 'user', content: message });
 
         if (this.offline) {
@@ -35,54 +36,66 @@ AÇÃO:
         }
 
         try {
-            const response = await this._callAPI(message, sensorData);
+            const response = await this._callDeepSeekAPI(message, sensorData, context);
             this.history.push({ role: 'assistant', content: response });
             return { success: true, response, offline: false, model: this.model };
         } catch (err) {
-            console.error('[AI] API error:', err.message);
+            console.error('[AI] DeepSeek API error:', err.message);
             const response = this._offlineReply(message, sensorData);
             this.history.push({ role: 'assistant', content: response });
             return { success: true, response, offline: true, fallbackReason: err.message, model: this.model };
         }
     }
 
-    async _callAPI(message, sensorData) {
-        const context = sensorData ? this._sensorContext(sensorData) : '';
-        const sysContent = this.systemPrompt + context;
+    async _callDeepSeekAPI(message, sensorData, context = {}) {
+        const sensorContext = sensorData ? this._sensorContext(sensorData) : '';
+        const sessionContext = context.session ? `\n\n[MODO DA SESSÃO]\n${context.mode || 'diagnostic'}\n[DISPOSITIVO]\n${context.device || 'Não conectado'}` : '';
+
         const messages = [
-            { role: 'user', content: 'INSTRUCAO DE SISTEMA (nao responda a esta mensagem, apenas absorva):\n' + sysContent },
-            { role: 'assistant', content: 'Entendido. Sou o AION Repair OS, pronto para diagnosticar.' },
-            ...this.history.slice(-12)
+            { role: 'system', content: this.systemPrompt + sensorContext + sessionContext },
+            ...this.history.slice(-20)
         ];
+
         const body = {
             model: this.model,
             messages,
-            temperature: 0.7,
-            max_tokens: 600
+            max_tokens: 4096,
+            temperature: 0.7
         };
 
         return new Promise((resolve, reject) => {
             const data = JSON.stringify(body);
-            const req = https.request({
-                hostname: 'openrouter.ai',
+            
+            const options = {
+                hostname: 'api.deepseek.com',
                 port: 443,
-                path: '/api/v1/chat/completions',
+                path: '/chat/completions',
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${this.apiKey}`,
-                    'HTTP-Referer': 'http://localhost:8081',
-                    'X-Title': 'AION Repair OS',
                     'Content-Length': Buffer.byteLength(data)
                 }
-            }, (res) => {
+            };
+
+            console.log('[AI] Calling DeepSeek R1...');
+
+            const req = https.request(options, (res) => {
                 let body = '';
                 res.on('data', c => body += c);
                 res.on('end', () => {
                     if (res.statusCode === 200) {
                         try {
                             const json = JSON.parse(body);
-                            resolve(json.choices[0].message.content);
+                            let content = json.choices[0].message.content;
+                            
+                            // DeepSeek R1 pode incluir reasoning_content
+                            const reasoning = json.choices[0].message.reasoning_content;
+                            if (reasoning && reasoning.length > 0) {
+                                console.log('[AI] Reasoning tokens used:', reasoning.length);
+                            }
+                            
+                            resolve(content);
                         } catch (e) {
                             reject(new Error('Parse error: ' + body.substring(0, 200)));
                         }
@@ -91,8 +104,9 @@ AÇÃO:
                     }
                 });
             });
+
             req.on('error', reject);
-            req.setTimeout(30000, () => { req.destroy(); reject(new Error('API timeout')); });
+            req.setTimeout(120000, () => { req.destroy(); reject(new Error('API timeout (>120s) - R1 pode demorar mais')) });
             req.write(data);
             req.end();
         });
@@ -189,7 +203,11 @@ Wi-Fi: ${s.wifi ? 'Conectado' : 'Desconectado'} | Bluetooth: ${s.bluetooth ? 'At
         return `⚠️ Problemas detectados:\n${issues.join('\n')}\n\nDados completos:\n• CPU: ${s.cpu}%\n• RAM: ${s.ram}%\n• Temp: ${s.temperature}°C\n• Bateria: ${s.battery.level}%\n• Armazenamento: ${s.disk}%\n\nQuer que eu detalhe algum problema específico?`;
     }
 
-    setApiKey(key) { this.apiKey = key; this.offline = false; }
+    setApiKey(key) { 
+        this.apiKey = key; 
+        this.offline = false;
+        console.log('[AI] API key configured for DeepSeek R1');
+    }
     setOffline() { this.offline = true; }
     clearHistory() { this.history = []; }
 }

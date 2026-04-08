@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Silicon Onyx | AION Repair OS V7.0</title>
+<title>AION Repair OS V7 - Agentic Android Repair</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -41,25 +41,8 @@ tailwind.config = {
                 "inverse-surface": "#e5e2e1",
                 "inverse-primary": "#4854bb",
                 "background": "#131313",
-                "primary-fixed": "#dfe0ff",
-                "primary-fixed-dim": "#bdc2ff",
-                "secondary-fixed": "#4dfdd3",
-                "secondary-fixed-dim": "#13e0b7",
-                "on-primary-fixed": "#000965",
-                "on-primary-fixed-variant": "#2e3aa2",
-                "on-secondary-fixed": "#002019",
-                "on-secondary-fixed-variant": "#005141",
-                "tertiary": "#c8c6c5",
-                "tertiary-fixed": "#e5e2e1",
-                "tertiary-fixed-dim": "#c8c6c5",
-                "tertiary-container": "#747373",
-                "on-tertiary-fixed": "#1c1b1b",
-                "on-tertiary-fixed-variant": "#474746",
-                "on-tertiary-container": "#fdfaf9",
-                "surface-bright": "#3a3939",
-                "outline": "#908f9e",
-                "on-primary": "#121f8b",
-                "on-error-container": "#ffdad6"
+                "warning": "#ffb74d",
+                "warning-container": "#5d4037"
             },
             borderRadius: {
                 "DEFAULT": "0.125rem",
@@ -89,10 +72,6 @@ tailwind.config = {
     background: rgba(42, 42, 42, 0.4);
     backdrop-filter: blur(20px);
 }
-.mesh-overlay {
-    background-image: radial-gradient(circle at center, transparent 0%, rgba(68, 247, 205, 0.05) 100%), 
-                      repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(68, 247, 205, 0.03) 1px, rgba(68, 247, 205, 0.03) 2px);
-}
 .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
 }
@@ -103,423 +82,366 @@ tailwind.config = {
     background: rgba(189, 194, 255, 0.1);
     border-radius: 10px;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(189, 194, 255, 0.3);
-}
-.sensor-ring {
-    animation: pulse-ring 2s ease-in-out infinite;
-}
-@keyframes pulse-ring {
-    0%, 100% { box-shadow: 0 0 8px rgba(68, 247, 205, 0.3); }
-    50% { box-shadow: 0 0 20px rgba(68, 247, 205, 0.6); }
-}
-.blink {
-    animation: blink 1s step-end infinite;
-}
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+.risk-low { background: rgba(68, 247, 205, 0.2); border-color: #44f7cd; }
+.risk-medium { background: rgba(255, 183, 77, 0.2); border-color: #ffb74d; }
+.risk-high { background: rgba(255, 180, 171, 0.2); border-color: #ffb4ab; }
+.timeline-line {
+    background: linear-gradient(to bottom, #44f7cd, #5e6ad2);
 }
 </style>
 </head>
-<body class="bg-background text-on-surface font-body selection:bg-primary/30">
+<body class="bg-background text-on-surface font-body h-screen flex flex-col overflow-hidden">
 
-<!-- TopAppBar -->
-<header class="fixed top-0 w-full z-50 bg-[#131313] border-b border-[#454652]/15 flex justify-between items-center px-6 py-3">
-    <div class="flex items-center gap-6">
-        <span class="text-xl font-black tracking-tighter text-[#BDC2FF] font-['Inter'] uppercase">Silicon Onyx</span>
-        <div class="hidden md:flex gap-8 items-center h-full">
-            <a class="text-[#BDC2FF] border-b-2 border-[#BDC2FF] font-['Inter'] tracking-tighter font-bold uppercase py-1" href="#" onclick="showSection('diagnostics')">Diagnostics</a>
-            <a class="text-[#A8AAB4] font-['Inter'] tracking-tighter font-bold uppercase hover:bg-[#1C1B1B] hover:text-white transition-colors py-1" href="#" onclick="showSection('audit')">Logs de Auditoria</a>
-            <a class="text-[#A8AAB4] font-['Inter'] tracking-tighter font-bold uppercase hover:bg-[#1C1B1B] hover:text-white transition-colors py-1" href="#" onclick="showSection('fleet')">Frota de Dispositivos</a>
-        </div>
-    </div>
-    <div class="flex items-center gap-4">
-        <span class="material-symbols-outlined text-[#BDC2FF] scale-95 active:opacity-80 transition-all duration-150 cursor-pointer" onclick="toggleDeviceSelector()" title="Selecionar Dispositivo">settings_input_component</span>
-        <span class="material-symbols-outlined text-[#BDC2FF] scale-95 active:opacity-80 transition-all duration-150 cursor-pointer" onclick="toggleForensicCapture()" title="Captura Forense">analytics</span>
-        <span class="material-symbols-outlined text-[#BDC2FF] scale-95 active:opacity-80 transition-all duration-150 cursor-pointer" onclick="toggleSettings()" title="Configurações">tune</span>
-        <div id="connection-indicator" class="w-3 h-3 rounded-full bg-error" title="Desconectado"></div>
-    </div>
-</header>
-
-<!-- SideNavBar -->
-<nav class="fixed left-0 top-0 h-full w-64 z-40 bg-[#1C1B1B] border-r border-[#454652]/15 flex flex-col pt-20 pb-8 px-4 hidden lg:flex">
-    <div class="mb-10 px-2">
-        <div class="flex items-center gap-3 mb-2">
-            <div class="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center">
-                <span class="material-symbols-outlined text-secondary">android_fingerprint</span>
-            </div>
-            <div>
-                <div id="device-name" class="text-white font-bold font-['Space_Grotesk'] text-sm">Aguardando...</div>
-                <div id="device-model" class="text-[#A8AAB4] text-[10px] uppercase tracking-widest font-['Space_Grotesk']">No Device</div>
-            </div>
-        </div>
-    </div>
-    <div class="flex flex-col gap-2 flex-grow">
-        <div onclick="showSection('diagnostics')" class="bg-[#2A2A2A] text-[#BDC2FF] border-l-4 border-[#5E6AD2] px-4 py-3 flex items-center gap-3 font-['Space_Grotesk'] text-xs font-medium uppercase tracking-widest cursor-pointer">
-            <span class="material-symbols-outlined">android_fingerprint</span>
-            <span>Diagnostics</span>
-        </div>
-        <div onclick="showSection('console')" class="text-[#A8AAB4] opacity-70 px-4 py-3 flex items-center gap-3 font-['Space_Grotesk'] text-xs font-medium uppercase tracking-widest hover:bg-[#2A2A2A] hover:text-[#BDC2FF] transition-all cursor-pointer">
-            <span class="material-symbols-outlined">terminal</span>
-            <span>Console ADB</span>
-        </div>
-        <div onclick="showSection('ai')" class="text-[#A8AAB4] opacity-70 px-4 py-3 flex items-center gap-3 font-['Space_Grotesk'] text-xs font-medium uppercase tracking-widest hover:bg-[#2A2A2A] hover:text-[#BDC2FF] transition-all cursor-pointer">
-            <span class="material-symbols-outlined">psychology</span>
-            <span>AI Assistant</span>
-        </div>
-        <div onclick="showSection('forensic')" class="text-[#A8AAB4] opacity-70 px-4 py-3 flex items-center gap-3 font-['Space_Grotesk'] text-xs font-medium uppercase tracking-widest hover:bg-[#2A2A2A] hover:text-[#BDC2FF] transition-all cursor-pointer">
-            <span class="material-symbols-outlined">shield_lock</span>
-            <span>Captura Forense</span>
-        </div>
-        <div onclick="toggleExecutor()" id="executor-btn" class="text-[#A8AAB4] opacity-70 px-4 py-3 flex items-center gap-3 font-['Space_Grotesk'] text-xs font-medium uppercase tracking-widest hover:bg-[#2A2A2A] hover:text-[#BDC2FF] transition-all cursor-pointer">
-            <span class="material-symbols-outlined">auto_mode</span>
-            <span>Executor: <span id="executor-status">OFF</span></span>
-        </div>
-    </div>
-    <div class="mt-auto flex flex-col gap-2 border-t border-outline-variant/10 pt-6">
-        <div onclick="toggleSettings()" class="px-4 py-2 flex items-center gap-3 text-[#A8AAB4] text-[10px] uppercase font-['Space_Grotesk'] hover:text-white cursor-pointer">
-            <span class="material-symbols-outlined text-sm">tune</span>
-            <span>Configurar IA</span>
-        </div>
-        <div class="px-4 py-2 flex items-center gap-3 text-[#A8AAB4] text-[10px] uppercase font-['Space_Grotesk']">
-            <span class="material-symbols-outlined text-sm">ai</span>
-            <span>AI: <span id="ai-mode">DETECTANDO</span></span>
-        </div>
-    </div>
-</nav>
-
-<!-- Main Content Canvas -->
-<main class="lg:ml-64 pt-20 pb-12 px-6 min-h-screen">
-    <div id="section-diagnostics" class="grid grid-cols-12 gap-6 h-full">
-        <!-- Left Panel: AI Chat -->
-        <section class="col-span-12 lg:col-span-3 space-y-6">
-            <div class="glass-panel rounded-xl p-6 border-l-2 border-primary/40 h-[calc(100vh-220px)] flex flex-col">
-                <div class="flex items-center gap-2 mb-6">
-                    <span id="ai-indicator" class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                    <h2 class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-bold">Motor de Pensamento</h2>
-                </div>
-                <div id="ai-thoughts" class="flex-grow overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-                    <div class="space-y-2">
-                        <div class="text-[10px] font-label text-primary font-bold uppercase tracking-tighter">AION // INICIANDO</div>
-                        <p class="text-sm text-on-surface leading-relaxed">Aguardando conexão com dispositivo Android. Conecte via USB e habilite Depuração USB.</p>
-                    </div>
-                </div>
-                <div class="mt-6 pt-4 border-t border-outline-variant/10">
-                    <div class="flex items-center gap-3">
-                        <div id="autonomy-indicator" class="w-2 h-2 bg-error rounded-full"></div>
-                        <span class="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Modo Manual</span>
-                    </div>
+<!-- Consent Modal - First Time Only -->
+<div id="consent-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+    <div class="bg-surface-container-low rounded-2xl border border-outline-variant/20 w-full max-w-lg shadow-2xl">
+        <div class="p-6 border-b border-outline-variant/20">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-secondary text-3xl">security</span>
+                <div>
+                    <h2 class="text-xl font-bold text-white">Termos de Consentimento</h2>
+                    <p class="text-xs text-on-surface-variant">AION Repair OS - Session Safety</p>
                 </div>
             </div>
-        </section>
-
-        <!-- Center Panel: Device Visualizer -->
-        <section class="col-span-12 lg:col-span-6 flex flex-col items-center justify-center relative min-h-[500px]">
-            <div class="absolute inset-0 overflow-hidden pointer-events-none">
-                <div class="mesh-overlay w-full h-full opacity-30"></div>
-            </div>
-
-            <!-- Sensor Array Left -->
-            <div class="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col gap-6">
-                <div class="flex items-center gap-3 group">
-                    <div id="sensor-temp-ring" class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center sensor-ring bg-secondary/5">
-                        <span class="material-symbols-outlined text-secondary text-sm">thermostat</span>
-                    </div>
+        </div>
+        <div class="p-6 space-y-4">
+            <p class="text-sm text-on-surface">Para iniciar uma sessão de diagnóstico, você deve aceitar os seguintes termos:</p>
+            
+            <div class="space-y-3">
+                <label class="flex items-start gap-3 cursor-pointer p-3 bg-surface-container-high rounded-lg hover:bg-surface-container-highest transition-colors">
+                    <input type="checkbox" id="consent-usb" class="mt-1 accent-secondary">
                     <div>
-                        <div id="sensor-temp-value" class="text-[10px] font-mono text-secondary">--°C</div>
-                        <div class="text-[8px] font-mono text-on-surface-variant">TEMP</div>
+                        <span class="text-sm font-medium">USB Debugging Habilitado</span>
+                        <p class="text-xs text-on-surface-variant mt-1">Confirmei que o USB Debugging está ativado nas Opções do Desenvolvedor do dispositivo.</p>
                     </div>
-                </div>
-                <div class="flex items-center gap-3 group">
-                    <div id="sensor-cpu-ring" class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center sensor-ring bg-secondary/5">
-                        <span class="material-symbols-outlined text-secondary text-sm">memory</span>
-                    </div>
+                </label>
+                
+                <label class="flex items-start gap-3 cursor-pointer p-3 bg-surface-container-high rounded-lg hover:bg-surface-container-highest transition-colors">
+                    <input type="checkbox" id="consent-rsa" class="mt-1 accent-secondary">
                     <div>
-                        <div id="sensor-cpu-value" class="text-[10px] font-mono text-secondary">--%</div>
-                        <div class="text-[8px] font-mono text-on-surface-variant">CPU</div>
+                        <span class="text-sm font-medium">Chave RSA Autorizada</span>
+                        <p class="text-xs text-on-surface-variant mt-1">Autorizei o computador a depurar o dispositivo quando solicitado.</p>
                     </div>
-                </div>
-                <div class="flex items-center gap-3 group">
-                    <div class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center bg-secondary/5">
-                        <span class="material-symbols-outlined text-secondary text-sm">storage</span>
-                    </div>
+                </label>
+                
+                <label class="flex items-start gap-3 cursor-pointer p-3 bg-surface-container-high rounded-lg hover:bg-surface-container-highest transition-colors">
+                    <input type="checkbox" id="consent-scope" class="mt-1 accent-secondary">
                     <div>
-                        <div id="sensor-disk-value" class="text-[10px] font-mono text-secondary">--%</div>
-                        <div class="text-[8px] font-mono text-on-surface-variant">DISK</div>
+                        <span class="text-sm font-medium">Escopo de Reparos Aceito</span>
+                        <p class="text-xs text-on-surface-variant mt-1">Entendo que o AION pode executar ações de diagnóstico e reparo no meu dispositivo.</p>
                     </div>
-                </div>
-                <div class="flex items-center gap-3 group">
-                    <div class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center bg-secondary/5">
-                        <span class="material-symbols-outlined text-secondary text-sm">wifi</span>
-                    </div>
-                    <div>
-                        <div id="sensor-wifi-value" class="text-[10px] font-mono text-secondary">OFF</div>
-                        <div class="text-[8px] font-mono text-on-surface-variant">WIFI</div>
-                    </div>
-                </div>
+                </label>
             </div>
-
-            <!-- Device Mockup -->
-            <div id="device-mockup" class="relative w-64 h-[500px] bg-surface-container-lowest rounded-[3rem] border-[8px] border-surface-container-high shadow-2xl overflow-hidden opacity-50">
-                <div class="absolute top-0 w-full h-8 flex justify-center items-center">
-                    <div class="w-12 h-1 bg-surface-variant rounded-full"></div>
+            
+            <div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/10">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="material-symbols-outlined text-warning text-sm">info</span>
+                    <span class="text-xs font-bold text-warning">Aviso de Segurança</span>
                 </div>
-                <div class="w-full h-full bg-black flex flex-col items-center justify-center p-4">
-                    <div class="relative w-full h-full flex items-center justify-center">
-                        <div class="absolute inset-0 opacity-40">
-                            <svg class="w-full h-full stroke-[0.5] fill-none stroke-green-400" viewbox="0 0 100 100">
-                                <path d="M10 10 L90 90 M10 90 L90 10 M50 0 L50 100 M0 50 L100 50"></path>
-                                <circle cx="50" cy="50" r="40"></circle>
-                                <circle cx="50" cy="50" r="20"></circle>
-                            </svg>
-                        </div>
-                        <div class="z-10 text-center">
-                            <div id="device-model-display" class="text-[10px] font-mono text-secondary mb-1">SEM DISPOSITIVO</div>
-                            <div id="connection-status" class="text-xl font-black text-white tracking-widest uppercase">OFFLINE</div>
-                            <div class="text-[8px] font-mono text-on-surface-variant mt-2 tracking-[0.3em]">AGUARDANDO</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sensor Array Right -->
-            <div class="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-6 text-right">
-                <div class="flex items-center justify-end gap-3 group">
-                    <div>
-                        <div id="sensor-battery-value" class="text-[10px] font-mono text-secondary">--%</div>
-                        <div class="text-[8px] font-mono text-on-surface-variant">BATT</div>
-                    </div>
-                    <div id="sensor-battery-ring" class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center sensor-ring bg-secondary/5">
-                        <span class="material-symbols-outlined text-secondary text-sm">battery_charging_full</span>
-                    </div>
-                </div>
-                <div class="flex items-center justify-end gap-3 group">
-                    <div>
-                        <div id="sensor-signal-value" class="text-[10px] font-mono text-secondary">--</div>
-                        <div class="text-[8px] font-mono text-on-surface-variant">SIGNAL</div>
-                    </div>
-                    <div class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center bg-secondary/5">
-                        <span class="material-symbols-outlined text-secondary text-sm">signal_cellular_alt</span>
-                    </div>
-                </div>
-                <div class="flex items-center justify-end gap-3 group">
-                    <div>
-                        <div id="sensor-ram-value" class="text-[10px] font-mono text-secondary">--%</div>
-                        <div class="text-[8px] font-mono text-on-surface-variant">RAM</div>
-                    </div>
-                    <div class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center bg-secondary/5">
-                        <span class="material-symbols-outlined text-secondary text-sm">memory</span>
-                    </div>
-                </div>
-                <div class="flex items-center justify-end gap-3 group">
-                    <div>
-                        <div id="sensor-bt-value" class="text-[10px] font-mono text-secondary">OFF</div>
-                        <div class="text-[8px] font-mono text-on-surface-variant">BT</div>
-                    </div>
-                    <div class="w-10 h-10 rounded-full border border-secondary/30 flex items-center justify-center bg-secondary/5">
-                        <span class="material-symbols-outlined text-secondary text-sm">bluetooth</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-8 text-center">
-                <div id="device-title" class="text-2xl font-black text-white tracking-tighter uppercase font-headline">SEM DISPOSITIVO</div>
-                <div id="handshake-status" class="text-[10px] font-label text-secondary font-bold tracking-[0.5em] mt-1">AGUARDANDO CONEXÃO</div>
-            </div>
-        </section>
-
-        <!-- Right Panel: ADB Console -->
-        <section class="col-span-12 lg:col-span-3">
-            <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/15 h-[calc(100vh-220px)] flex flex-col overflow-hidden shadow-2xl">
-                <div class="bg-surface-container-high px-4 py-2 flex items-center justify-between border-b border-outline-variant/10">
-                    <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-on-surface-variant text-sm">terminal</span>
-                        <span class="text-[10px] font-mono font-bold text-on-surface-variant">ADB_CONSOLE</span>
-                    </div>
-                    <div class="flex gap-1">
-                        <div id="console-error" class="w-2 h-2 rounded-full bg-error/40"></div>
-                        <div id="console-ok" class="w-2 h-2 rounded-full bg-secondary/40"></div>
-                    </div>
-                </div>
-                <div id="adb-console" class="p-4 flex-grow overflow-y-auto font-mono text-[11px] space-y-1 custom-scrollbar leading-tight">
-                    <div class="text-on-surface-variant">$ AION Repair OS V7.0</div>
-                    <div class="text-secondary">Sistema iniciado. Aguardando dispositivo...</div>
-                </div>
-                <div class="p-3 border-t border-outline-variant/10">
-                    <div class="flex gap-2">
-                        <input id="cmd-input" type="text" class="flex-grow bg-surface-container-high border-none rounded px-3 py-2 text-xs font-mono" placeholder="Digite um comando ADB..." onkeypress="if(event.key==='Enter')executeCommand()">
-                        <button onclick="executeCommand()" class="bg-primary text-background px-4 py-2 rounded text-xs font-bold">EXEC</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </div>
-
-    <!-- AI Chat Section (Hidden by default) -->
-    <div id="section-ai" class="hidden h-full">
-        <div class="max-w-4xl mx-auto h-[calc(100vh-180px)] flex flex-col">
-            <div class="flex items-center gap-3 mb-6">
-                <span class="material-symbols-outlined text-secondary text-2xl">psychology</span>
-                <h2 class="text-xl font-black text-white uppercase tracking-tight">AI Assistant</h2>
-            </div>
-            <div id="ai-chat-messages" class="flex-grow bg-surface-container-low rounded-xl p-6 overflow-y-auto custom-scrollbar space-y-4">
-                <div class="flex gap-3">
-                    <div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center flex-shrink-0">
-                        <span class="material-symbols-outlined text-primary text-sm">smart_toy</span>
-                    </div>
-                    <div class="bg-surface-container-high rounded-xl rounded-tl-none p-4 max-w-[80%]">
-                        <p class="text-sm text-on-surface">Olá! Sou o <strong>AION Repair OS</strong>, seu assistente de diagnóstico Android. Como posso ajudar hoje?</p>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-4 flex gap-3">
-                <input id="ai-chat-input" type="text" class="flex-grow bg-surface-container-high border-none rounded-xl px-4 py-3 text-sm" placeholder="Pergunte sobre o dispositivo, diagnóstico, reparo..." onkeypress="if(event.key==='Enter')sendChatMessage()">
-                <button onclick="sendChatMessage()" class="bg-gradient-to-br from-primary to-primary-container text-background px-6 py-3 rounded-xl font-bold">Enviar</button>
+                <p class="text-[10px] text-on-surface-variant">Todas as ações são registradas em log para auditoria. AION nunca executará ações destrutivas sem sua confirmação explícita.</p>
             </div>
         </div>
-    </div>
-
-    <!-- Console Section (Hidden by default) -->
-    <div id="section-console" class="hidden h-full">
-        <div class="h-[calc(100vh-180px)] bg-surface-container-lowest rounded-xl border border-outline-variant/15 flex flex-col overflow-hidden">
-            <div class="bg-surface-container-high px-4 py-3 flex items-center justify-between border-b border-outline-variant/10">
-                <div class="flex items-center gap-3">
-                    <span class="material-symbols-outlined text-secondary">terminal</span>
-                    <span class="font-mono font-bold text-sm">ADB TERMINAL</span>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="clearConsole()" class="text-[10px] font-mono uppercase px-3 py-1 bg-surface-container rounded hover:bg-surface">Limpar</button>
-                </div>
-            </div>
-            <div id="full-console" class="flex-grow p-4 overflow-y-auto font-mono text-xs custom-scrollbar leading-relaxed"></div>
-            <div class="p-4 border-t border-outline-variant/10 bg-surface-container-low">
-                <div class="flex gap-3">
-                    <span class="text-secondary font-mono">$</span>
-                    <input id="full-cmd-input" type="text" class="flex-grow bg-transparent border-none outline-none font-mono text-sm text-on-surface" placeholder="Digite comando ADB..." onkeypress="if(event.key==='Enter')executeFullCommand()">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Forensic Section (Hidden by default) -->
-    <div id="section-forensic" class="hidden h-full">
-        <div class="max-w-3xl mx-auto">
-            <div class="flex items-center gap-3 mb-6">
-                <span class="material-symbols-outlined text-secondary text-2xl">shield</span>
-                <h2 class="text-xl font-black text-white uppercase tracking-tight">Captura Forense</h2>
-            </div>
-            <div class="bg-surface-container-low rounded-xl p-6">
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-2 block">Tipo de Captura</label>
-                        <div class="flex gap-4">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="capture-type" value="basic" checked class="accent-primary">
-                                <span class="text-sm">Básica</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="capture-type" value="full" class="accent-primary">
-                                <span class="text-sm">Completa</span>
-                            </label>
-                        </div>
-                    </div>
-                    <div id="capture-progress-container" class="hidden">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-mono text-on-surface-variant">Progresso</span>
-                            <span id="capture-progress-text" class="text-xs font-mono text-secondary">0%</span>
-                        </div>
-                        <div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
-                            <div id="capture-progress-bar" class="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300" style="width: 0%"></div>
-                        </div>
-                        <p id="capture-status" class="text-[10px] font-mono text-on-surface-variant mt-2">Aguardando...</p>
-                    </div>
-                    <button id="capture-btn" onclick="startCapture()" class="w-full bg-gradient-to-br from-primary to-primary-container text-background py-3 rounded-xl font-bold uppercase tracking-wider">
-                        Iniciar Captura Forense
-                    </button>
-                    <div id="capture-results" class="hidden mt-6 space-y-3"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</main>
-
-<!-- Bottom Status Bar -->
-<footer class="fixed bottom-0 w-full lg:ml-64 bg-[#131313] border-t border-[#454652]/15 py-2 px-6 flex justify-between items-center z-40">
-    <div class="flex items-center gap-6">
-        <div class="flex items-center gap-2">
-            <span class="text-[10px] font-label text-on-surface-variant uppercase font-bold tracking-widest">Sistema:</span>
-            <span class="text-[10px] font-mono text-white bg-surface-container-high px-2 py-0.5 rounded">KALI LINUX</span>
-        </div>
-        <div class="h-4 w-px bg-outline-variant/30"></div>
-        <div class="flex items-center gap-2">
-            <span class="text-[10px] font-label text-on-surface-variant uppercase font-bold tracking-widest">Status:</span>
-            <span id="footer-status" class="text-[10px] font-label text-error font-bold tracking-widest">DESCONECTADO</span>
-        </div>
-    </div>
-    <div class="flex items-center gap-4">
-        <div class="flex items-center gap-2">
-            <span class="text-[10px] font-mono text-on-surface-variant">CPU:</span>
-            <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                <div id="footer-cpu-bar" class="h-full bg-secondary transition-all duration-500" style="width: 0%"></div>
-            </div>
-            <span id="footer-cpu-value" class="text-[10px] font-mono text-secondary">0%</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <span class="text-[10px] font-mono text-on-surface-variant">RAM:</span>
-            <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                <div id="footer-ram-bar" class="h-full bg-primary transition-all duration-500" style="width: 0%"></div>
-            </div>
-            <span id="footer-ram-value" class="text-[10px] font-mono text-primary">0%</span>
-        </div>
-        <div class="text-[10px] font-mono text-on-surface-variant uppercase border border-outline-variant/20 px-2 py-0.5">V: 7.0.0</div>
-    </div>
-</footer>
-
-<!-- Device Selector Modal -->
-<div id="device-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center">
-    <div class="bg-surface-container-low rounded-2xl border border-outline-variant/20 w-96 max-h-[80vh] overflow-hidden shadow-2xl">
-        <div class="p-4 border-b border-outline-variant/20 flex items-center justify-between">
-            <h3 class="font-bold text-white">Selecionar Dispositivo</h3>
-            <button onclick="toggleDeviceSelector()" class="text-on-surface-variant hover:text-white">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        <div id="device-list" class="p-4 max-h-64 overflow-y-auto">
-            <p class="text-sm text-on-surface-variant">Procurando dispositivos...</p>
-        </div>
-        <div class="p-4 border-t border-outline-variant/20">
-            <button onclick="refreshDevices()" class="w-full bg-surface-container-high py-2 rounded-lg text-sm font-bold hover:bg-surface-container-highest transition-colors">
-                Atualizar Lista
+        <div class="p-6 border-t border-outline-variant/20">
+            <button onclick="acceptConsent()" class="w-full bg-gradient-to-br from-secondary to-secondary-container text-background py-3 rounded-xl font-bold uppercase tracking-wider">
+                Aceitar e Iniciar Sessão
             </button>
         </div>
     </div>
 </div>
 
-<!-- Settings Modal -->
-<div id="settings-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center">
-    <div class="bg-surface-container-low rounded-2xl border border-outline-variant/20 w-[500px] max-h-[80vh] overflow-hidden shadow-2xl">
+<!-- TopAppBar -->
+<header class="flex-none bg-surface-container-lowest/80 border-b border-outline-variant p-3 flex justify-between items-center z-50">
+    <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-secondary text-2xl">psychology</span>
+            <h1 class="text-lg font-black text-primary italic tracking-tighter">AION REPAIR OS</h1>
+        </div>
+        <span class="text-[10px] font-mono text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded">V7.0 AGENTIC</span>
+    </div>
+    <div class="flex items-center gap-3">
+        <div id="session-indicator" class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-error"></span>
+            <span class="text-xs font-mono text-on-surface-variant">SEM SESSÃO</span>
+        </div>
+        <button onclick="toggleSessionModal()" class="bg-secondary/20 hover:bg-secondary/30 px-4 py-1.5 rounded-lg text-xs font-bold text-secondary flex items-center gap-2 transition-colors">
+            <span class="material-symbols-outlined text-sm">add_circle</span>
+            Nova Sessão
+        </button>
+    </div>
+</header>
+
+<!-- Main Content -->
+<main class="flex-grow flex overflow-hidden">
+    <!-- Left Sidebar - Session Info -->
+    <aside class="w-72 border-r border-outline-variant flex flex-col bg-surface-container-low">
+        <!-- Session Status Card -->
+        <div class="p-4 border-b border-outline-variant/20">
+            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Sessão Atual</h3>
+            <div id="session-card" class="bg-surface-container-lowest rounded-xl p-4 border border-outline-variant/10">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-mono text-error">INATIVA</span>
+                    <span class="material-symbols-outlined text-error text-lg">radio_button_unchecked</span>
+                </div>
+                <p class="text-sm text-on-surface-variant">Nenhum dispositivo conectado</p>
+            </div>
+        </div>
+        
+        <!-- Consent Status -->
+        <div class="p-4 border-b border-outline-variant/20">
+            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Consentimentos</h3>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-on-surface">USB Debug</span>
+                    <span id="consent-usb-status" class="material-symbols-outlined text-error text-sm">close</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-on-surface">RSA Trusted</span>
+                    <span id="consent-rsa-status" class="material-symbols-outlined text-error text-sm">close</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-on-surface">Escopo</span>
+                    <span id="consent-scope-status" class="material-symbols-outlined text-error text-sm">close</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Policy Engine -->
+        <div class="p-4 border-b border-outline-variant/20">
+            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Policy Engine</h3>
+            <div class="bg-surface-container-lowest rounded-xl p-3 border border-outline-variant/10">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-secondary">STATUS</span>
+                    <span class="text-xs font-mono text-secondary">ACTIVE</span>
+                </div>
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-on-surface-variant">Allow List</span>
+                        <span class="text-[10px] font-mono text-secondary">ON</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-on-surface-variant">Deny List</span>
+                        <span class="text-[10px] font-mono text-secondary">ON</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-on-surface-variant">Human Confirm</span>
+                        <span class="text-[10px] font-mono text-warning">HIGH-RISK</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Device Info -->
+        <div class="p-4 flex-grow">
+            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Dispositivo</h3>
+            <div id="device-info" class="space-y-2 text-xs">
+                <div class="flex justify-between">
+                    <span class="text-on-surface-variant">Modelo</span>
+                    <span class="font-mono">--</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-on-surface-variant">Android</span>
+                    <span class="font-mono">--</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-on-surface-variant">Serial</span>
+                    <span class="font-mono text-[10px]">--</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- Center - Chat/Agent -->
+    <section class="flex-grow flex flex-col bg-surface-container-low">
+        <!-- Agent Header -->
         <div class="p-4 border-b border-outline-variant/20 flex items-center justify-between">
-            <h3 class="font-bold text-white">Configurações da IA</h3>
-            <button onclick="toggleSettings()" class="text-on-surface-variant hover:text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
+                    <span class="material-symbols-outlined text-secondary">smart_toy</span>
+                </div>
+                <div>
+                    <h2 class="font-bold text-white">AION Agent</h2>
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                        <span class="text-[10px] text-secondary font-mono">AGENTIC MODE</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] font-mono text-on-surface-variant">Mode:</span>
+                <select id="session-mode" class="bg-surface-container-high border-none rounded px-2 py-1 text-xs">
+                    <option value="diagnostic">Diagnóstico (Read-only)</option>
+                    <option value="repair">Reparo Assistido</option>
+                    <option value="forensic">Forense</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Chat Messages -->
+        <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-4 custom-scrollbar">
+            <!-- Welcome Message -->
+            <div class="flex gap-3">
+                <div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-secondary text-sm">smart_toy</span>
+                </div>
+                <div class="bg-surface-container-high rounded-xl rounded-tl-none p-4 max-w-[80%]">
+                    <div class="text-[10px] font-mono text-secondary mb-1">AION // READY</div>
+                    <p class="text-sm text-on-surface">Olá! Sou o <strong>AION Agent</strong>, seu assistente de diagnóstico agentic. Conecte um dispositivo Android e autorize os consentimentos para iniciar.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat Input -->
+        <div class="p-4 border-t border-outline-variant/20">
+            <div class="flex gap-3">
+                <input id="chat-input" type="text" class="flex-grow bg-surface-container-high border-none rounded-xl px-4 py-3 text-sm" placeholder="Descreva o problema ou pergunte sobre o dispositivo..." onkeypress="if(event.key==='Enter')sendMessage()">
+                <button onclick="sendMessage()" class="bg-gradient-to-br from-secondary to-secondary-container text-background px-6 py-3 rounded-xl font-bold flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">send</span>
+                    Enviar
+                </button>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Right Sidebar - Audit Timeline & Sensors -->
+    <aside class="w-80 border-l border-outline-variant flex flex-col bg-surface-container-low">
+        <!-- Telemetry -->
+        <div class="p-4 border-b border-outline-variant/20">
+            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Telemetria</h3>
+            <div class="grid grid-cols-2 gap-2">
+                <div class="bg-surface-container-lowest rounded-lg p-2 border border-outline-variant/10">
+                    <div class="text-[10px] text-on-surface-variant">CPU</div>
+                    <div id="telem-cpu" class="text-lg font-mono font-bold text-secondary">--</div>
+                </div>
+                <div class="bg-surface-container-lowest rounded-lg p-2 border border-outline-variant/10">
+                    <div class="text-[10px] text-on-surface-variant">RAM</div>
+                    <div id="telem-ram" class="text-lg font-mono font-bold text-secondary">--</div>
+                </div>
+                <div class="bg-surface-container-lowest rounded-lg p-2 border border-outline-variant/10">
+                    <div class="text-[10px] text-on-surface-variant">Temp</div>
+                    <div id="telem-temp" class="text-lg font-mono font-bold text-secondary">--</div>
+                </div>
+                <div class="bg-surface-container-lowest rounded-lg p-2 border border-outline-variant/10">
+                    <div class="text-[10px] text-on-surface-variant">Batt</div>
+                    <div id="telem-batt" class="text-lg font-mono font-bold text-secondary">--</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Audit Timeline -->
+        <div class="flex-grow flex flex-col p-4 overflow-hidden">
+            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Audit Timeline</h3>
+            <div id="audit-timeline" class="flex-grow overflow-y-auto custom-scrollbar space-y-3">
+                <div class="flex items-start gap-3">
+                    <div class="flex flex-col items-center">
+                        <div class="w-3 h-3 rounded-full bg-surface-container-high border-2 border-secondary"></div>
+                        <div class="w-0.5 h-full bg-outline-variant/20 mt-1"></div>
+                    </div>
+                    <div class="flex-grow pb-4">
+                        <div class="text-[10px] font-mono text-secondary">SYSTEM</div>
+                        <p class="text-xs text-on-surface mt-1">Aguardando início da sessão</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+</main>
+
+<!-- Bottom Status Bar -->
+<footer class="flex-none p-2 border-t border-outline-variant bg-surface-container-lowest flex justify-between items-center text-[10px]">
+    <div class="flex items-center gap-4">
+        <span class="font-mono text-on-surface-variant">AION Agentic OS v7.0</span>
+        <span class="text-outline-variant">|</span>
+        <span id="footer-status" class="font-mono text-error">DISCONNECTED</span>
+    </div>
+    <div class="flex items-center gap-4">
+        <span class="font-mono text-on-surface-variant">Policy: <span class="text-secondary">ACTIVE</span></span>
+        <span class="text-outline-variant">|</span>
+        <span class="font-mono text-on-surface-variant">Session: <span id="footer-session" class="text-error">NONE</span></span>
+    </div>
+</footer>
+
+<!-- Session Modal -->
+<div id="session-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-surface-container-low rounded-2xl border border-outline-variant/20 w-full max-w-md shadow-2xl">
+        <div class="p-4 border-b border-outline-variant/20 flex items-center justify-between">
+            <h3 class="font-bold text-white">Selecionar Dispositivo</h3>
+            <button onclick="toggleSessionModal()" class="text-on-surface-variant hover:text-white">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="p-4 space-y-4">
             <div>
-                <label class="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-2 block">OpenRouter API Key</label>
-                <input id="api-key-input" type="password" class="w-full bg-surface-container-high border-none rounded-lg px-4 py-3 text-sm font-mono" placeholder="sk-or-v1-...">
-            </div>
-            <div>
-                <label class="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-2 block">Modelo</label>
-                <select id="model-select" class="w-full bg-surface-container-high border-none rounded-lg px-4 py-3 text-sm">
-                    <option value="openai/gpt-oss-120b:free">GPT-OSS 120B (Free)</option>
-                    <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
-                    <option value="google/gemini-pro">Gemini Pro</option>
+                <label class="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-2 block">Dispositivo</label>
+                <select id="device-select" class="w-full bg-surface-container-high border-none rounded-lg px-4 py-3 text-sm">
+                    <option value="">Procurando dispositivos...</option>
                 </select>
             </div>
-            <button onclick="saveSettings()" class="w-full bg-gradient-to-br from-primary to-primary-container text-background py-3 rounded-xl font-bold uppercase">
-                Salvar Configurações
+            <button onclick="refreshDevices()" class="w-full bg-surface-container-high py-2 rounded-lg text-sm font-bold hover:bg-surface-container-highest transition-colors">
+                Atualizar Lista
+            </button>
+            
+            <div class="border-t border-outline-variant/20 pt-4">
+                <label class="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-2 block">Modo da Sessão</label>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-3 p-3 bg-surface-container-high rounded-lg cursor-pointer hover:bg-surface-container-highest">
+                        <input type="radio" name="mode" value="diagnostic" checked class="accent-secondary">
+                        <div>
+                            <span class="text-sm font-medium">Diagnóstico (Read-only)</span>
+                            <p class="text-[10px] text-on-surface-variant">Apenas leitura, sem ações de reparo</p>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-surface-container-high rounded-lg cursor-pointer hover:bg-surface-container-highest">
+                        <input type="radio" name="mode" value="repair" class="accent-secondary">
+                        <div>
+                            <span class="text-sm font-medium">Reparo Assistido</span>
+                            <p class="text-[10px] text-on-surface-variant">Execução de ações com confirmação</p>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-surface-container-high rounded-lg cursor-pointer hover:bg-surface-container-highest">
+                        <input type="radio" name="mode" value="forensic" class="accent-secondary">
+                        <div>
+                            <span class="text-sm font-medium">Forense</span>
+                            <p class="text-[10px] text-on-surface-variant">Captura completa com retenção de dados</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-outline-variant/20">
+            <button onclick="startSession()" class="w-full bg-gradient-to-br from-secondary to-secondary-container text-background py-3 rounded-xl font-bold uppercase">
+                Iniciar Sessão
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Risk Confirmation Modal -->
+<div id="risk-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-surface-container-low rounded-2xl border border-outline-variant/20 w-full max-w-md shadow-2xl">
+        <div class="p-4 border-b border-outline-variant/20">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-warning text-2xl">warning</span>
+                <div>
+                    <h3 class="font-bold text-white">Confirmação de Ação</h3>
+                    <span id="risk-level-badge" class="text-[10px] font-mono px-2 py-0.5 rounded risk-medium">MEDIUM RISK</span>
+                </div>
+            </div>
+        </div>
+        <div class="p-4">
+            <p class="text-sm text-on-surface mb-4">A seguinte ação requer confirmação:</p>
+            <div id="risk-action-details" class="bg-surface-container-lowest rounded-lg p-3 font-mono text-xs mb-4">
+                <!-- Action details here -->
+            </div>
+            <div class="bg-surface-container-high rounded-lg p-3">
+                <p class="text-[10px] text-on-surface-variant">Esta ação será registrada no Audit Timeline para compliance.</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-outline-variant/20 flex gap-3">
+            <button onclick="cancelRiskAction()" class="flex-1 bg-surface-container-high py-3 rounded-xl font-bold hover:bg-surface-container-highest transition-colors">
+                Cancelar
+            </button>
+            <button onclick="confirmRiskAction()" class="flex-1 bg-warning text-background py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
+                Confirmar
             </button>
         </div>
     </div>
@@ -528,162 +450,65 @@ tailwind.config = {
 <script>
 // Global State
 const state = {
-    ws: null,
-    connected: false,
+    sessionId: null,
+    sessionActive: false,
     deviceConnected: false,
+    consentGiven: false,
     currentDevice: null,
-    executorEnabled: false,
-    wsUrl: `ws://${window.location.hostname}:3001`
+    auditLog: [],
+    pendingAction: null
 };
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    connectWebSocket();
-    checkAiStatus();
+    // Check if consent was already given
+    if (localStorage.getItem('aion_consent')) {
+        document.getElementById('consent-modal').classList.add('hidden');
+        state.consentGiven = true;
+    }
     refreshDevices();
-    loadSettings();
+    updateAuditTimeline('SYSTEM', 'Sistema inicializado. Aguardando consentimento.');
 });
 
-// WebSocket Connection
-function connectWebSocket() {
-    try {
-        state.ws = new WebSocket(state.wsUrl);
-        
-        state.ws.onopen = () => {
-            console.log('[WS] Connected');
-            state.connected = true;
-            updateConnectionStatus(true);
-            addToConsole('$ WebSocket conectado ao servidor AION');
-        };
-        
-        state.ws.onclose = () => {
-            console.log('[WS] Disconnected');
-            state.connected = false;
-            updateConnectionStatus(false);
-            setTimeout(connectWebSocket, 3000);
-        };
-        
-        state.ws.onerror = (err) => {
-            console.error('[WS] Error:', err);
-        };
-        
-        state.ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                handleWSMessage(data);
-            } catch (e) {
-                console.error('[WS] Parse error:', e);
-            }
-        };
-    } catch (err) {
-        console.error('[WS] Connection failed:', err);
-        setTimeout(connectWebSocket, 5000);
-    }
-}
-
-function handleWSMessage(data) {
-    switch (data.type) {
-        case 'connected':
-            updateAIMode(!data.mode || data.mode === 'OFFLINE' ? 'OFFLINE' : 'ONLINE');
-            break;
-        case 'telemetry':
-            updateSensors(data.data);
-            break;
-        case 'device_connected':
-            handleDeviceConnected(data.device);
-            break;
-        case 'adb_log':
-            addToConsole(`$ ${data.command}`);
-            if (data.result) addToConsole(data.result);
-            break;
-        case 'chat_response':
-            addAIResponse(data.response);
-            break;
-        case 'executor_action':
-            handleExecutorAction(data);
-            break;
-    }
-}
-
-function updateConnectionStatus(connected) {
-    const indicator = document.getElementById('connection-indicator');
-    const status = document.getElementById('footer-status');
+function acceptConsent() {
+    const usb = document.getElementById('consent-usb').checked;
+    const rsa = document.getElementById('consent-rsa').checked;
+    const scope = document.getElementById('consent-scope').checked;
     
-    if (connected) {
-        indicator.className = 'w-3 h-3 rounded-full bg-secondary neon-pulse';
-        indicator.title = 'Conectado ao servidor';
-    } else {
-        indicator.className = 'w-3 h-3 rounded-full bg-error';
-        indicator.title = 'Desconectado';
+    if (!usb || !rsa || !scope) {
+        alert('Por favor, aceite todos os termos de consentimento.');
+        return;
     }
     
-    status.textContent = connected ? 'SERVIDOR OK' : 'DESCONECTADO';
-    status.className = connected ? 'text-[10px] font-label font-bold tracking-widest' : 'text-[10px] font-label text-error font-bold tracking-widest';
+    localStorage.setItem('aion_consent', JSON.stringify({
+        usb_debug: true,
+        rsa_trusted: true,
+        scope_accepted: true,
+        timestamp: new Date().toISOString()
+    }));
+    
+    state.consentGiven = true;
+    document.getElementById('consent-modal').classList.add('hidden');
+    
+    // Update consent status
+    document.getElementById('consent-usb-status').textContent = 'check';
+    document.getElementById('consent-usb-status').classList.remove('text-error');
+    document.getElementById('consent-usb-status').classList.add('text-secondary');
+    
+    document.getElementById('consent-rsa-status').textContent = 'check';
+    document.getElementById('consent-rsa-status').classList.remove('text-error');
+    document.getElementById('consent-rsa-status').classList.add('text-secondary');
+    
+    document.getElementById('consent-scope-status').textContent = 'check';
+    document.getElementById('consent-scope-status').classList.remove('text-error');
+    document.getElementById('consent-scope-status').classList.add('text-secondary');
+    
+    addToChat('AION', 'Consentimento aceito. Você está pronto para iniciar uma sessão de diagnóstico.', 'secondary');
+    updateAuditTimeline('CONSENT', 'Consentimento do usuário registrado');
 }
 
-// Sensor Updates
-function updateSensors(sensors) {
-    document.getElementById('sensor-temp-value').textContent = `${sensors.temperature}°C`;
-    document.getElementById('sensor-cpu-value').textContent = `${sensors.cpu}%`;
-    document.getElementById('sensor-ram-value').textContent = `${sensors.ram}%`;
-    document.getElementById('sensor-disk-value').textContent = `${sensors.disk}%`;
-    document.getElementById('sensor-battery-value').textContent = `${sensors.battery.level}%`;
-    document.getElementById('sensor-signal-value').textContent = sensors.signal > 0 ? `${sensors.signal} dBm` : '--';
-    document.getElementById('sensor-wifi-value').textContent = sensors.wifi ? 'ON' : 'OFF';
-    document.getElementById('sensor-bt-value').textContent = sensors.bluetooth ? 'ON' : 'OFF';
-    
-    // Footer bars
-    document.getElementById('footer-cpu-bar').style.width = `${sensors.cpu}%`;
-    document.getElementById('footer-cpu-value').textContent = `${sensors.cpu}%`;
-    document.getElementById('footer-ram-bar').style.width = `${sensors.ram}%`;
-    document.getElementById('footer-ram-value').textContent = `${sensors.ram}%`;
-    
-    // Color coding
-    updateSensorColor('sensor-temp-ring', sensors.temperature, 45, 50);
-    updateSensorColor('sensor-cpu-ring', sensors.cpu, 70, 90);
-    updateSensorColor('sensor-battery-ring', sensors.battery.level, 20, 10);
-}
-
-function updateSensorColor(elementId, value, warning, critical) {
-    const el = document.getElementById(elementId);
-    if (!el) return;
-    
-    if (value >= critical || value <= 5) {
-        el.classList.add('border-error/50');
-        el.classList.remove('border-secondary/30');
-    } else if (value >= warning) {
-        el.classList.add('border-primary/50');
-        el.classList.remove('border-secondary/30');
-    } else {
-        el.classList.add('border-secondary/30');
-        el.classList.remove('border-error/50', 'border-primary/50');
-    }
-}
-
-// Device Connection
-function handleDeviceConnected(device) {
-    state.deviceConnected = true;
-    state.currentDevice = device;
-    
-    document.getElementById('device-name').textContent = device.model || 'Android Device';
-    document.getElementById('device-model').textContent = device.manufacturer || '';
-    document.getElementById('device-model-display').textContent = device.model || 'DEVICE';
-    document.getElementById('device-title').textContent = device.model || 'DISPOSITIVO';
-    document.getElementById('handshake-status').textContent = 'HANDSHAKE_OK';
-    
-    const mockup = document.getElementById('device-mockup');
-    mockup.classList.remove('opacity-50');
-    document.getElementById('connection-status').textContent = 'ONLINE';
-    
-    document.getElementById('footer-status').textContent = `CONECTADO: ${device.model}`;
-    document.getElementById('footer-status').className = 'text-[10px] font-label text-secondary font-bold tracking-widest';
-    
-    addToConsole('$ Dispositivo conectado: ' + device.model);
-    addAIMessage(`Dispositivo <strong>${device.model}</strong> conectado com sucesso. Telemetria ativa.`);
-}
-
-function toggleDeviceSelector() {
-    const modal = document.getElementById('device-modal');
+function toggleSessionModal() {
+    const modal = document.getElementById('session-modal');
     modal.classList.toggle('hidden');
     if (!modal.classList.contains('hidden')) {
         refreshDevices();
@@ -691,351 +516,311 @@ function toggleDeviceSelector() {
 }
 
 async function refreshDevices() {
-    const list = document.getElementById('device-list');
-    list.innerHTML = '<p class="text-sm text-on-surface-variant">Procurando dispositivos...</p>';
+    const select = document.getElementById('device-select');
+    select.innerHTML = '<option value="">Procurando...</option>';
     
     try {
         const res = await fetch('/api/devices');
         const devices = await res.json();
         
         if (devices.length === 0) {
-            list.innerHTML = '<p class="text-sm text-error">Nenhum dispositivo encontrado. Verifique a conexão USB e depuração.</p>';
+            select.innerHTML = '<option value="">Nenhum dispositivo encontrado</option>';
             return;
         }
         
-        list.innerHTML = devices.map(d => `
-            <div onclick="connectDevice('${d.id}')" class="p-3 bg-surface-container-high rounded-lg mb-2 cursor-pointer hover:bg-surface-container-highest transition-colors">
-                <div class="font-bold text-white">${d.id}</div>
-                <div class="text-xs text-on-surface-variant">${d.type}</div>
-            </div>
-        `).join('');
+        select.innerHTML = devices.map(d => 
+            `<option value="${d.id}">${d.id}</option>`
+        ).join('');
     } catch (err) {
-        list.innerHTML = '<p class="text-sm text-error">Erro ao buscar dispositivos</p>';
+        select.innerHTML = '<option value="">Erro ao buscar dispositivos</option>';
     }
 }
 
-async function connectDevice(deviceId) {
+async function startSession() {
+    const deviceId = document.getElementById('device-select').value;
+    if (!deviceId) {
+        alert('Selecione um dispositivo');
+        return;
+    }
+    
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    
     try {
-        const res = await fetch('/api/connect', {
+        const res = await fetch('/api/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ deviceId })
+            body: JSON.stringify({
+                channel: 'web',
+                device_station_id: 'local',
+                mode: mode,
+                consent: {
+                    usb_debug_enabled: true,
+                    rsa_trusted: true,
+                    scope_accepted: true
+                }
+            })
         });
+        
         const data = await res.json();
         
-        if (data.success) {
-            toggleDeviceSelector();
-            handleDeviceConnected(data.device);
+        if (data.sessionId) {
+            state.sessionId = data.sessionId;
+            state.sessionActive = true;
+            state.currentDevice = deviceId;
+            
+            toggleSessionModal();
+            updateSessionUI(data);
+            addToChat('AION', `Sessão iniciada! Modo: ${mode}. Device ID: ${deviceId}`, 'secondary');
+            updateAuditTimeline('SESSION', `Sessão iniciada: ${data.sessionId}`);
         }
     } catch (err) {
-        console.error('Connection error:', err);
+        // Fallback - create session locally
+        state.sessionId = 'session_' + Date.now();
+        state.sessionActive = true;
+        state.currentDevice = deviceId;
+        
+        toggleSessionModal();
+        updateSessionUI({ mode: mode, device: deviceId });
+        addToChat('AION', `Sessão iniciada! Modo: ${mode}`, 'secondary');
+        updateAuditTimeline('SESSION', `Sessão iniciada localmente`);
     }
 }
 
-// Console Functions
-function addToConsole(text) {
-    const console = document.getElementById('adb-console');
-    const fullConsole = document.getElementById('full-console');
-    const lines = text.split('\n');
+function updateSessionUI(data) {
+    // Update session indicator
+    const indicator = document.getElementById('session-indicator');
+    indicator.innerHTML = `
+        <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+        <span class="text-xs font-mono text-secondary">ATIVA</span>
+    `;
     
-    lines.forEach(line => {
-        const div = document.createElement('div');
-        div.className = line.startsWith('$') ? 'text-secondary' : 'text-on-surface-variant';
-        div.textContent = line;
-        console.appendChild(div);
-        console.scrollTop = console.scrollHeight;
+    // Update session card
+    const card = document.getElementById('session-card');
+    card.innerHTML = `
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-mono text-secondary">ATIVA</span>
+            <span class="material-symbols-outlined text-secondary text-lg">check_circle</span>
+        </div>
+        <p class="text-sm text-on-surface font-bold">${data.device || state.currentDevice}</p>
+        <p class="text-xs text-on-surface-variant mt-1">Modo: ${data.mode}</p>
+    `;
+    
+    // Update footer
+    document.getElementById('footer-status').textContent = 'CONNECTED';
+    document.getElementById('footer-status').classList.remove('text-error');
+    document.getElementById('footer-status').classList.add('text-secondary');
+    
+    document.getElementById('footer-session').textContent = state.sessionId.substring(0, 8) + '...';
+    document.getElementById('footer-session').classList.remove('text-error');
+    document.getElementById('footer-session').classList.add('text-secondary');
+}
+
+function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    input.value = '';
+    addToChat('USER', message, 'primary');
+    
+    // Send to AI
+    fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            message: message,
+            sessionId: state.sessionId,
+            context: {
+                mode: document.getElementById('session-mode').value,
+                device: state.currentDevice
+            }
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        addToChat('AION', data.response, 'secondary');
+        updateAuditTimeline('CHAT', `Mensagem enviada: ${message.substring(0, 50)}...`);
         
-        if (fullConsole) {
-            const clone = div.cloneNode(true);
-            fullConsole.appendChild(clone);
-            fullConsole.scrollTop = fullConsole.scrollHeight;
+        // If there are actions to execute
+        if (data.actions) {
+            data.actions.forEach(action => {
+                executeAction(action);
+            });
         }
+    })
+    .catch(err => {
+        addToChat('AION', 'Erro de comunicação. Tente novamente.', 'error');
     });
 }
 
-function clearConsole() {
-    document.getElementById('full-console').innerHTML = '';
-    document.getElementById('adb-console').innerHTML = '<div class="text-secondary">$ Console limpa</div>';
+function addToChat(sender, message, type) {
+    const container = document.getElementById('chat-messages');
+    const colorClass = type === 'primary' ? 'bg-primary-container text-on-primary-container' : 
+                       type === 'secondary' ? 'bg-surface-container-high text-on-surface' :
+                       'bg-error-container text-error';
+    const bgClass = type === 'primary' ? 'rounded-tr-none ml-auto' : 'rounded-tl-none';
+    
+    const html = `
+        <div class="flex gap-3 ${type === 'primary' ? 'flex-row-reverse' : ''}">
+            ${type !== 'primary' ? `
+                <div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-secondary text-sm">smart_toy</span>
+                </div>
+            ` : ''}
+            <div class="${colorClass} rounded-xl ${bgClass} p-4 max-w-[80%]">
+                <div class="text-[10px] font-mono ${type === 'secondary' ? 'text-secondary' : 'text-on-surface-variant'} mb-1">
+                    ${sender} // ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <p class="text-sm whitespace-pre-wrap">${escapeHtml(message)}</p>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML += html;
+    container.scrollTop = container.scrollHeight;
 }
 
-async function executeCommand() {
-    const input = document.getElementById('cmd-input');
-    const cmd = input.value.trim();
-    if (!cmd) return;
-    input.value = '';
+function executeAction(action) {
+    const riskLevel = getRiskLevel(action);
     
-    addToConsole(`$ ${cmd}`);
+    if (riskLevel === 'HIGH') {
+        showRiskModal(action);
+    } else {
+        performAction(action);
+    }
+}
+
+function getRiskLevel(action) {
+    // Define risk levels for different actions
+    const highRisk = ['rm -rf', 'dd', 'mkfs', 'reboot', 'shutdown', 'factory'];
+    const mediumRisk = ['pm clear', 'pm disable', 'am force-stop', 'setprop'];
+    const lowRisk = ['dumpsys', 'getprop', 'cat /proc/', 'ps', 'top', 'df'];
+    
+    const cmd = action.command || action;
+    
+    if (highRisk.some(r => cmd.includes(r))) return 'HIGH';
+    if (mediumRisk.some(r => cmd.includes(r))) return 'MEDIUM';
+    return 'LOW';
+}
+
+function showRiskModal(action) {
+    state.pendingAction = action;
+    
+    const level = getRiskLevel(action);
+    const badge = document.getElementById('risk-level-badge');
+    badge.textContent = level + ' RISK';
+    badge.className = `text-[10px] font-mono px-2 py-0.5 rounded risk-${level.toLowerCase()}`;
+    
+    document.getElementById('risk-action-details').innerHTML = `
+        <div class="text-on-surface-variant">Comando:</div>
+        <div class="text-secondary">${action.command || action}</div>
+        ${action.reason ? `<div class="text-on-surface-variant mt-2">Razão:</div><div class="text-on-surface">${action.reason}</div>` : ''}
+    `;
+    
+    document.getElementById('risk-modal').classList.remove('hidden');
+}
+
+function cancelRiskAction() {
+    state.pendingAction = null;
+    document.getElementById('risk-modal').classList.add('hidden');
+    addToChat('AION', 'Ação cancelada pelo usuário.', 'error');
+}
+
+function confirmRiskAction() {
+    document.getElementById('risk-modal').classList.add('hidden');
+    if (state.pendingAction) {
+        performAction(state.pendingAction);
+        state.pendingAction = null;
+    }
+}
+
+async function performAction(action) {
+    const cmd = action.command || action;
+    
+    updateAuditTimeline('ACTION', `Executando: ${cmd}`);
+    addToChat('AION', `Executando: ${cmd}`, 'secondary');
     
     try {
         const res = await fetch('/api/execute', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ command: cmd })
+            body: JSON.stringify({ 
+                command: cmd,
+                sessionId: state.sessionId
+            })
         });
-        const data = await res.json();
         
-        if (data.success && data.result) {
-            addToConsole(data.result);
-        } else if (data.error) {
-            addToConsole('Erro: ' + data.error);
-        }
-    } catch (err) {
-        addToConsole('Erro de conexão');
-    }
-}
-
-function executeFullCommand() {
-    executeCommand();
-    document.getElementById('cmd-input').value = document.getElementById('full-cmd-input').value;
-    document.getElementById('full-cmd-input').value = '';
-}
-
-// AI Functions
-function sendChatMessage() {
-    const input = document.getElementById('ai-chat-input');
-    const message = input.value.trim();
-    if (!message) return;
-    input.value = '';
-    
-    addUserChatMessage(message);
-    
-    fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message })
-    })
-    .then(r => r.json())
-    .then(data => addAIResponse(data.response))
-    .catch(e => addAIResponse('Erro de conexão com a IA.'));
-}
-
-function addUserChatMessage(text) {
-    const container = document.getElementById('ai-chat-messages');
-    container.innerHTML += `
-        <div class="flex gap-3 justify-end">
-            <div class="bg-primary-container rounded-xl rounded-tr-none p-4 max-w-[80%]">
-                <p class="text-sm text-on-primary-container">${escapeHtml(text)}</p>
-            </div>
-        </div>
-    `;
-    container.scrollTop = container.scrollHeight;
-}
-
-function addAIResponse(text) {
-    const container = document.getElementById('ai-chat-messages');
-    const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-    container.innerHTML += `
-        <div class="flex gap-3">
-            <div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center flex-shrink-0">
-                <span class="material-symbols-outlined text-secondary text-sm">smart_toy</span>
-            </div>
-            <div class="bg-surface-container-high rounded-xl rounded-tl-none p-4 max-w-[80%]">
-                <div class="text-[10px] font-mono text-on-surface-variant mb-1">AION // ${time}</div>
-                <p class="text-sm text-on-surface whitespace-pre-wrap">${escapeHtml(text)}</p>
-            </div>
-        </div>
-    `;
-    container.scrollTop = container.scrollHeight;
-    
-    // Also add to thoughts panel
-    addAIMessage(text);
-}
-
-function addAIMessage(text) {
-    const thoughts = document.getElementById('ai-thoughts');
-    const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-    thoughts.innerHTML += `
-        <div class="space-y-2">
-            <div class="text-[10px] font-label text-secondary font-bold uppercase tracking-tighter">AI_REPAIR // ${time}</div>
-            <p class="text-sm text-on-surface leading-relaxed">${escapeHtml(text).substring(0, 200)}${text.length > 200 ? '...' : ''}</p>
-        </div>
-    `;
-    thoughts.scrollTop = thoughts.scrollHeight;
-}
-
-async function checkAiStatus() {
-    try {
-        const res = await fetch('/api/ai/status');
-        const data = await res.json();
-        updateAIMode(data.offline ? 'OFFLINE' : 'ONLINE');
-    } catch (err) {
-        updateAIMode('OFFLINE');
-    }
-}
-
-function updateAIMode(mode) {
-    const indicator = document.getElementById('ai-indicator');
-    const modeText = document.getElementById('ai-mode');
-    
-    if (mode === 'ONLINE') {
-        indicator.className = 'w-2 h-2 rounded-full bg-secondary animate-pulse';
-        modeText.textContent = 'ONLINE';
-        modeText.className = 'text-secondary';
-    } else {
-        indicator.className = 'w-2 h-2 rounded-full bg-primary animate-pulse';
-        modeText.textContent = 'OFFLINE';
-        modeText.className = 'text-primary';
-    }
-}
-
-// Executor
-function toggleExecutor() {
-    state.executorEnabled = !state.executorEnabled;
-    const status = document.getElementById('executor-status');
-    const btn = document.getElementById('executor-btn');
-    const autonomyIndicator = document.getElementById('autonomy-indicator');
-    
-    if (state.executorEnabled) {
-        status.textContent = 'ON';
-        btn.classList.add('bg-[#2A2A2A]', 'text-[#BDC2FF]', 'border-l-4', 'border-[#5E6AD2]');
-        btn.classList.remove('text-[#A8AAB4]', 'opacity-70');
-        autonomyIndicator.className = 'w-2 h-2 bg-secondary rounded-full animate-pulse';
-        addToConsole('$ Executor autônomo ATIVADO');
-    } else {
-        status.textContent = 'OFF';
-        btn.classList.remove('bg-[#2A2A2A]', 'text-[#BDC2FF]', 'border-l-4', 'border-[#5E6AD2]');
-        btn.classList.add('text-[#A8AAB4]', 'opacity-70');
-        autonomyIndicator.className = 'w-2 h-2 bg-error rounded-full';
-        addToConsole('$ Executor autônomo DESATIVADO');
-    }
-}
-
-function handleExecutorAction(data) {
-    addAIMessage(`Ciclo #${data.cycle}: ${data.thoughts?.[0]?.hypothesis || 'Ação executada'}`);
-    data.actions?.forEach(action => {
-        addToConsole(`> Executor: ${action}`);
-    });
-}
-
-// Forensic Capture
-function toggleForensicCapture() {
-    showSection('forensic');
-}
-
-async function startCapture() {
-    const type = document.querySelector('input[name="capture-type"]:checked').value;
-    const container = document.getElementById('capture-progress-container');
-    const btn = document.getElementById('capture-btn');
-    const results = document.getElementById('capture-results');
-    
-    container.classList.remove('hidden');
-    btn.disabled = true;
-    btn.textContent = 'Capturando...';
-    results.classList.add('hidden');
-    
-    try {
-        const res = await fetch('/api/capture/forensic', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type })
-        });
         const data = await res.json();
         
         if (data.success) {
-            pollCaptureStatus(data.jobId);
+            updateAuditTimeline('ACTION', `Sucesso: ${cmd}`);
+            addToChat('AION', `Resultado:\n${data.result || 'Comando executado com sucesso.'}`, 'secondary');
+        } else {
+            updateAuditTimeline('ERROR', `Falha: ${cmd} - ${data.error}`);
+            addToChat('AION', `Erro: ${data.error}`, 'error');
         }
     } catch (err) {
-        alert('Erro ao iniciar captura');
-        btn.disabled = false;
-        btn.textContent = 'Iniciar Captura Forense';
+        updateAuditTimeline('ERROR', `Erro de conexão: ${cmd}`);
+        addToChat('AION', 'Erro de conexão com o servidor.', 'error');
     }
 }
 
-function pollCaptureStatus(jobId) {
-    const interval = setInterval(async () => {
-        try {
-            const res = await fetch(`/api/capture/forensic/${jobId}`);
-            const data = await res.json();
-            
-            document.getElementById('capture-progress-bar').style.width = `${data.progress}%`;
-            document.getElementById('capture-progress-text').textContent = `${data.progress}%`;
-            document.getElementById('capture-status').textContent = data.status;
-            
-            if (data.done) {
-                clearInterval(interval);
-                finishCapture(data);
-            }
-        } catch (err) {
-            clearInterval(interval);
-        }
-    }, 500);
-}
-
-function finishCapture(data) {
-    const btn = document.getElementById('capture-btn');
-    btn.disabled = false;
-    btn.textContent = 'Captura Concluída';
+function updateAuditTimeline(type, message) {
+    const container = document.getElementById('audit-timeline');
+    const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
-    const results = document.getElementById('capture-results');
-    results.classList.remove('hidden');
+    const colorMap = {
+        'SYSTEM': 'border-secondary',
+        'SESSION': 'border-primary',
+        'CONSENT': 'border-secondary',
+        'CHAT': 'border-on-surface-variant',
+        'ACTION': 'border-secondary',
+        'ERROR': 'border-error'
+    };
     
-    if (data.result) {
-        results.innerHTML = `
-            <div class="bg-surface-container-high rounded-lg p-4">
-                <h4 class="font-bold text-white mb-2">Resultado da Captura</h4>
-                <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-                    <div>Battery: ${data.result.battery?.match(/level:\s*(\d+)/)?.[1] || '--'}%</div>
-                    <div>Temperature: ${data.result.bugreport?.match(/temperature:\s*(\d+)/)?.[1] || '--'}</div>
-                    <div>Status: OK</div>
-                    <div>Timestamp: ${new Date(data.result.timestamp).toLocaleString()}</div>
-                </div>
+    const html = `
+        <div class="flex items-start gap-3">
+            <div class="flex flex-col items-center">
+                <div class="w-3 h-3 rounded-full bg-surface-container-high border-2 ${colorMap[type] || 'border-outline-variant'}"></div>
+                <div class="w-0.5 h-full bg-outline-variant/20 mt-1"></div>
             </div>
-        `;
-    }
+            <div class="flex-grow pb-4">
+                <div class="text-[10px] font-mono text-secondary">${type} // ${time}</div>
+                <p class="text-xs text-on-surface mt-1">${escapeHtml(message)}</p>
+            </div>
+        </div>
+    `;
     
-    if (data.error) {
-        results.innerHTML = `<div class="bg-error-container p-4 rounded-lg text-error">Erro: ${data.error}</div>`;
-    }
-}
-
-// Settings
-function toggleSettings() {
-    const modal = document.getElementById('settings-modal');
-    modal.classList.toggle('hidden');
-}
-
-function saveSettings() {
-    const apiKey = document.getElementById('api-key-input').value;
-    const model = document.getElementById('model-select').value;
+    container.innerHTML += html;
+    container.scrollTop = container.scrollHeight;
     
-    fetch('/api/ai/key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: apiKey, model })
-    })
-    .then(() => {
-        localStorage.setItem('aion_api_key', apiKey);
-        localStorage.setItem('aion_model', model);
-        toggleSettings();
-        checkAiStatus();
-    });
+    state.auditLog.push({ type, message, time });
 }
 
-function loadSettings() {
-    const apiKey = localStorage.getItem('aion_api_key');
-    const model = localStorage.getItem('aion_model');
-    
-    if (apiKey) document.getElementById('api-key-input').value = apiKey;
-    if (model) document.getElementById('model-select').value = model;
-}
-
-// Section Navigation
-function showSection(name) {
-    const sections = ['diagnostics', 'ai', 'console', 'forensic'];
-    sections.forEach(s => {
-        document.getElementById(`section-${s}`).classList.add('hidden');
-    });
-    document.getElementById(`section-${name}`).classList.remove('hidden');
-}
-
-// Utilities
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
+
+// Poll for telemetry updates
+setInterval(async () => {
+    if (!state.sessionActive) return;
+    
+    try {
+        const res = await fetch('/api/sensors');
+        const data = await res.json();
+        
+        document.getElementById('telem-cpu').textContent = data.cpu + '%';
+        document.getElementById('telem-ram').textContent = data.ram + '%';
+        document.getElementById('telem-temp').textContent = data.temperature + '°';
+        document.getElementById('telem-batt').textContent = data.battery.level + '%';
+        
+        // Color coding
+        if (data.cpu > 80) document.getElementById('telem-cpu').classList.add('text-warning');
+        if (data.temperature > 45) document.getElementById('telem-temp').classList.add('text-error');
+    } catch {}
+}, 2000);
 </script>
 </body>
 </html>

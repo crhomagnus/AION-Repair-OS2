@@ -9,21 +9,19 @@ class AiAgent {
         this.offline = !this.apiKey;
         this.history = [];
         
-        this.systemPrompt = `Você é o AION Repair OS, um arquiteto forense e especialista de elite em diagnóstico e reparo avançado de dispositivos Android.
+        this.systemPrompt = `Você é o AION Repair OS, um assistente de diagnóstico Android especializado.
 
-SUA PERSONALIDADE E TOM:
-- Responda de forma direta, objetiva e muito pontual. Sem verbosidade, sem enrolação.
-- NÃO pareça um robô. Varie suas saudações, o formato das suas respostas e as palavras que usa.
-- O usuário é quem vai dar as respostas ou explicações longas; você deve absorver, analisar os dados disponíveis, e agir ou perguntar algo específico.
+PERSONALIDADE:
+- Seja NATURAL e conversacional, como um amigo técnico que sabe das coisas.
+- Varie suas respostas - não repita sempre a mesma estrutura.
+- Faça perguntas específicas, não genéricas.
+- Quando não tiver dados, seja honesto e puxe assunto.
 
-DIRETRIZES DE DIAGNÓSTICO (Meta: 99% Software / 90% Hardware):
-- Faça diagnósticos precisos cruzando o relato do usuário com os dados REAIS dos sensores e telemetria disponíveis no contexto.
-- PROBLEMAS DE SOFTWARE (Alvo 99%): Esforce-se ao máximo para resolver problemas de software.
-- PROBLEMAS DE HARDWARE (Alvo 90%): Já que você não tem mãos para consertar o hardware, sua missão é cravar o diagnóstico.
-
-AÇÃO:
-- Não tente "dar aulas" de funcionamento do Android a não ser que o usuário peça. Vá direto ao ponto.
-- Responda SEMPRE em português (exceto se abordado em outro idioma).`;
+REGRAS:
+- SEM dispositivo conectado: Converse naturalmente, pergunte sobre o problema, ofereça ajuda geral.
+- COM dispositivo conectado: Use os dados reais para diagnóstico preciso.
+- Responda em português (exceto se pedir em outro idioma).
+- Seja direto - sem burocracia.`;
     }
 
     async chat(message, sensorData, context = {}) {
@@ -48,12 +46,26 @@ AÇÃO:
     }
 
     async _callDeepSeekAPI(message, sensorData, context = {}) {
-        const sensorContext = sensorData ? this._sensorContext(sensorData) : '';
-        const sessionContext = context.session ? `\n\n[MODO DA SESSÃO]\n${context.mode || 'diagnostic'}\n[DISPOSITIVO]\n${context.device || 'Não conectado'}` : '';
+        let systemContent = this.systemPrompt;
+        
+        // Verifica se há dispositivo conectado com dados reais
+        const hasDevice = sensorData && (sensorData.cpu > 0 || sensorData.ram > 0 || sensorData.battery.level > 0);
+        
+        if (hasDevice) {
+            systemContent += this._sensorContext(sensorData);
+        } else {
+            systemContent += `\n\n[SEM DISPOSITIVO CONECTADO]
+O usuário ainda não conectou um dispositivo Android. Seja acolhedor e ajude a começar.
+NÃO mencionei "bateria 0%" repetidamente - isso é redundante e chato.`;
+        }
+
+        if (context.session) {
+            systemContent += `\n\n[MODO DA SESSÃO]\n${context.mode || 'diagnostic'}`;
+        }
 
         const messages = [
-            { role: 'system', content: this.systemPrompt + sensorContext + sessionContext },
-            ...this.history.slice(-20)
+            { role: 'system', content: systemContent },
+            ...this.history.slice(-4)
         ];
 
         const body = {
@@ -106,7 +118,7 @@ AÇÃO:
             });
 
             req.on('error', reject);
-            req.setTimeout(120000, () => { req.destroy(); reject(new Error('API timeout (>120s) - R1 pode demorar mais')) });
+            req.setTimeout(300000, () => { req.destroy(); reject(new Error('API timeout (>5min) - R1 pode demorar mais')) });
             req.write(data);
             req.end();
         });

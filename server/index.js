@@ -2,12 +2,13 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
-const { v4: uuidv4 } = require('crypto');
+const crypto = require('crypto');
 const AdbBridge = require('./adb-bridge');
 const SensorPoller = require('./sensor-poller');
 const CmdValidator = require('./cmd-validator');
 const AiAgent = require('./ai-agent');
 const AiExecutor = require('./ai-executor');
+const { version: appVersion } = require('../package.json');
 
 class AIONServer {
     constructor() {
@@ -22,7 +23,8 @@ class AIONServer {
         this.ai = new AiAgent(this.adb, this.validator);
         this.executor = new AiExecutor(this.sensors, this.validator, this.adb);
         
-        this.port = process.env.PORT || 3001;
+        this.port = Number(process.env.PORT) || 3001;
+        this.host = process.env.HOST || '127.0.0.1';
         
         this.sessions = new Map();
         this.actionLog = [];
@@ -51,7 +53,7 @@ class AIONServer {
                 return res.status(400).json({ error: 'device_station_id required' });
             }
 
-            const sessionId = 'session_' + uuidv4();
+            const sessionId = 'session_' + crypto.randomUUID();
             const session = {
                 id: sessionId,
                 channel: channel || 'web',
@@ -100,11 +102,11 @@ class AIONServer {
         this.app.get('/api/status', (req, res) => {
             res.json({
                 status: 'operational',
-                version: '7.0.0',
+                version: appVersion,
                 mode: 'AGENTIC',
                 uptime: process.uptime(),
                 device: this.adb.deviceInfo,
-                aiMode: this.ai.offline ? 'OFFLINE' : 'ONLINE',
+                aiMode: this.ai.apiKey ? 'ONLINE' : 'AI_UNAVAILABLE',
                 aiModel: this.ai.model,
                 activeSessions: this.sessions.size,
                 policyEngine: {
@@ -226,7 +228,7 @@ class AIONServer {
                 const result = await this.ai.chat(message, sensorData, {
                     session,
                     mode: context?.mode || 'diagnostic',
-                    device: context?.device
+                    device: context?.device || this.adb.deviceInfo || null
                 });
 
                 this.broadcast({ type: 'chat_response', ...result });
@@ -241,9 +243,8 @@ class AIONServer {
         // === AI CONFIG ===
         this.app.get('/api/ai/status', (req, res) => {
             res.json({
-                offline: this.ai.offline,
+                configured: Boolean(this.ai.apiKey),
                 model: this.ai.model,
-                hasKey: Boolean(this.ai.apiKey),
                 policyEngine: {
                     allowList: true,
                     denyList: true,
@@ -254,9 +255,9 @@ class AIONServer {
 
         this.app.post('/api/ai/key', (req, res) => {
             const { key, model } = req.body;
-            if (key) this.ai.setApiKey(key);
-            if (model) this.ai.model = model;
-            res.json({ success: true, offline: this.ai.offline, model: this.ai.model });
+            if (key) this.ai.setApiKey(key, model);
+            else if (model) this.ai.setModel(model);
+            res.json({ success: true, configured: Boolean(this.ai.apiKey), model: this.ai.model });
         });
 
         // === TELEMETRY ===
@@ -316,8 +317,8 @@ class AIONServer {
             this.clients.add(ws);
             ws.send(JSON.stringify({ 
                 type: 'connected', 
-                mode: this.ai.offline ? 'OFFLINE' : 'ONLINE',
-                version: '7.0.0'
+                mode: this.ai.apiKey ? 'ONLINE' : 'AI_UNAVAILABLE',
+                version: appVersion
             }));
 
             ws.on('message', async (raw) => {
@@ -334,7 +335,9 @@ class AIONServer {
     async _handleWS(ws, data) {
         switch (data.type) {
             case 'chat': {
-                const result = await this.ai.chat(data.message, this.sensors.getState());
+                const result = await this.ai.chat(data.message, this.sensors.getState(), {
+                    device: this.adb.deviceInfo || null
+                });
                 ws.send(JSON.stringify({ type: 'chat_response', ...result }));
                 break;
             }
@@ -352,9 +355,9 @@ class AIONServer {
                 break;
             }
             case 'set_api_key': {
-                if (data.key) this.ai.setApiKey(data.key);
-                if (data.model) this.ai.model = data.model;
-                ws.send(JSON.stringify({ type: 'ai_config', offline: this.ai.offline, model: this.ai.model }));
+                if (data.key) this.ai.setApiKey(data.key, data.model);
+                else if (data.model) this.ai.setModel(data.model);
+                ws.send(JSON.stringify({ type: 'ai_config', configured: Boolean(this.ai.apiKey), model: this.ai.model }));
                 break;
             }
             case 'ping': ws.send(JSON.stringify({ type: 'pong' })); break;
@@ -407,7 +410,7 @@ class AIONServer {
 
     _logAction(sessionId, actionType, payload, riskLevel) {
         const log = {
-            id: uuidv4(),
+            id: crypto.randomUUID(),
             session_id: sessionId,
             action_type: actionType,
             payload,
@@ -519,13 +522,19 @@ class AIONServer {
     }
 
     start() {
-        this.server.listen(this.port, () => {
+        this.server.on('error', (err) => {
+            console.error('[Server] Failed to start:', err.message);
+            process.exitCode = 1;
+        });
+
+        this.server.listen(this.port, this.host, () => {
+            const displayHost = this.host === '0.0.0.0' ? 'localhost' : this.host;
             console.log('');
             console.log('╔═══════════════════════════════════════════════════════╗');
             console.log('║         AION REPAIR OS V7.0 - AGENTIC MODE           ║');
             console.log('╠═══════════════════════════════════════════════════════╣');
-            console.log(`║  Dashboard:    http://localhost:${this.port}                   ║`);
-            console.log(`║  AI Mode:      ${this.ai.offline ? 'OFFLINE (smart local)' : 'ONLINE (' + this.ai.model + ')'}    ║`);
+            console.log(`║  Dashboard:    http://${displayHost}:${this.port}                   ║`);
+            console.log(`║  AI Mode:      ${this.ai.apiKey ? 'ONLINE (' + this.ai.model + ')' : 'AI_UNAVAILABLE'}    ║`);
             console.log(`║  Policy:       ACTIVE (Allow/Deny + Human Confirm)  ║`);
             console.log(`║  Sessions:     ${String(this.sessions.size).padStart(3)} active                         ║`);
             console.log('╚═══════════════════════════════════════════════════════╝');

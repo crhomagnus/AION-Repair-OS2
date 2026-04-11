@@ -124,15 +124,22 @@ class SensorPoller extends EventEmitter {
 
     async _signal() {
         try {
-            const out = await this._exec('dumpsys telephony registry');
-            const m = out.match(/mSignalStrength=(\d+)/);
-            if (m) return parseInt(m[1]);
+            const out = await this._exec('dumpsys telephony.registry');
+            const signalLine = out.split('\n').find(line => /mSignalStrength|mCellSignalStrength|SignalStrength/i.test(line)) || out;
+            const dbmMatch = signalLine.match(/(-\d+)\s*dBm/i) || out.match(/(-\d+)\s*dBm/i);
+            if (dbmMatch) return parseInt(dbmMatch[1], 10);
+
+            const negativeValues = signalLine.match(/-\d+/g);
+            if (negativeValues && negativeValues.length) return parseInt(negativeValues[0], 10);
+
+            const level = signalLine.match(/(?:level|bars)[=: ]+(\d+)/i);
+            if (level) return -113 + (parseInt(level[1], 10) * 10);
         } catch {}
         try {
             const out = await this._exec('dumpsys connectivity');
-            if (out.includes('WIFI')) return -50;
+            if (out.toLowerCase().includes('wifi')) return -50;
         } catch {}
-        return -1;
+        return this.state.signal;
     }
 
     async _latency() {

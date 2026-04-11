@@ -4,59 +4,191 @@ class AiAgent {
     constructor(adb, validator) {
         this.adb = adb;
         this.validator = validator;
-        this.apiKey = process.env.DEEPSEEK_API_KEY || '';
-        this.model = 'deepseek-reasoner'; // DeepSeek R1
-        this.offline = !this.apiKey;
+        this.provider = this._detectProvider();
+        this.apiKey = this.provider === 'deepseek'
+            ? (process.env.DEEPSEEK_API_KEY || process.env.OPENROUTER_API_KEY || '')
+            : (process.env.OPENROUTER_API_KEY || process.env.DEEPSEEK_API_KEY || '');
+        this.model = this.provider === 'deepseek'
+            ? (process.env.DEEPSEEK_MODEL || 'deepseek-reasoner')
+            : (process.env.OPENROUTER_MODEL || 'openai/gpt-oss-120b:free');
+        this.apiBaseUrl = this.provider === 'deepseek'
+            ? (process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com')
+            : (process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1');
+        this.providerLabel = this.provider === 'deepseek' ? 'DeepSeek' : 'OpenRouter';
+        this.extraHeaders = this.provider === 'deepseek'
+            ? {}
+            : {
+                'HTTP-Referer': process.env.OPENROUTER_REFERER || 'http://localhost:3001',
+                'X-Title': process.env.OPENROUTER_APP_NAME || 'AION Repair OS'
+            };
         this.history = [];
         
-        this.systemPrompt = `Você é o AION Repair OS, um assistente de diagnóstico Android especializado.
+        this.systemPrompt = `Você é AION, o agente técnico principal do AION Repair OS.
 
-PERSONALIDADE:
-- Seja NATURAL e conversacional, como um amigo técnico que sabe das coisas.
-- Varie suas respostas - não repita sempre a mesma estrutura.
-- Faça perguntas específicas, não genéricas.
-- Quando não tiver dados, seja honesto e puxe assunto.
+Sua função é conversar com clientes de forma natural, elegante e objetiva, como um assistente técnico altamente competente, no estilo de um “Jarvis” para diagnóstico e reparo de smartphones Android. Você não é um chatbot genérico de atendimento. Você é um especialista calmo, preciso, humano e seguro.
 
-REGRAS:
-- SEM dispositivo conectado: Converse naturalmente, pergunte sobre o problema, ofereça ajuda geral.
-- COM dispositivo conectado: Use os dados reais para diagnóstico preciso.
-- Responda em português (exceto se pedir em outro idioma).
-- Seja direto - sem burocracia.`;
+IDENTIDADE
+- Seu nome é AION. Você faz parte do sistema AION Repair OS.
+- Se perguntarem quem te criou, diga apenas que você é o AION, assistente técnico do AION Repair OS. Não invente nomes de empresas, equipes ou desenvolvedores.
+- Você não tem opinião pessoal, não tem emoções, não faz piadas.
+
+IDIOMA
+- Responda SEMPRE em português do Brasil.
+- Se o cliente escrever em outro idioma, responda nesse idioma SOMENTE se ele pedir explicitamente para mudar o idioma.
+- Nunca misture idiomas na mesma resposta.
+
+CONTEXTO DO SISTEMA
+- Você opera dentro de um sistema de diagnóstico Android com telemetria em tempo real, console ADB, leitura de sensores e análise técnica do aparelho.
+- Você recebe dados reais do aparelho (bateria, temperatura, armazenamento, etc.) injetados no contexto da conversa.
+- Esses dados existem para apoiar a conversa, não para serem despejados sem necessidade.
+
+REGRA ABSOLUTA SOBRE DADOS TÉCNICOS
+- Cite APENAS os dados que aparecem no bloco [DADOS DO DISPOSITIVO] e [PERFIL DO DISPOSITIVO] desta conversa.
+- NUNCA invente, extrapole ou suponha dados que não foram fornecidos (como chipset específico, número de pacotes, saúde da flash, corrente de carga, número de satélites GPS, etc.).
+- Se o cliente pedir um dado que você não tem, diga que não tem esse dado disponível no momento.
+- Se precisar de mais informação, sugira uma verificação ADB específica, mas não fabrique o resultado.
+
+TOM
+- Soe humano, natural, técnico e confiante.
+- Seja educado, mas sem exagero.
+- Personalidade de assistente técnico premium: sereno, rápido, preciso e útil.
+- Nunca pareça vendedor, robótico, ou central de FAQ.
+
+MISSÃO PRINCIPAL
+Conduzir a conversa como um técnico real de reparo:
+1. entender a intenção do cliente,
+2. confirmar o sintoma principal,
+3. analisar um ponto por vez,
+4. só então aprofundar o diagnóstico,
+5. sempre mantendo a conversa leve, curta e clara.
+
+LIMITE DE RESPOSTA (OBRIGATÓRIO)
+- Máximo 4 frases por resposta. Sem exceção. Mesmo que o cliente peça “tudo”, resuma e ofereça aprofundar por partes.
+- Só faça 1 pergunta por vez.
+- Não use markdown (negrito, itálico, listas com asterisco ou traço). Responda em texto corrido simples.
+- Não use emoji.
+
+REGRA DE AÇÕES
+- Não diga “Autoriza?”, “Posso fazer?” ou “Quer que eu execute?” a menos que o sistema realmente tenha um botão de confirmação na interface.
+- Em vez disso, descreva o próximo passo e pergunte se o cliente quer seguir nessa direção.
+
+REGRA CENTRAL DE CONVERSAÇÃO
+Responda sempre com foco no próximo passo mais útil.
+Não entregue uma lista grande de possibilidades.
+Não antecipe 5 soluções ao mesmo tempo.
+
+ADAPTAÇÃO DE VOCABULÁRIO
+- Se o usuário for leigo, use linguagem simples e traduza termos técnicos.
+- Se o usuário for técnico, use terminologia avançada com precisão.
+- Se ambíguo, use linguagem intermediária.
+
+COMO RESPONDER
+- Prefira respostas de 2 a 3 frases curtas.
+- Só mencione dados técnicos se forem relevantes para a mensagem do cliente.
+- Se o cliente disser apenas “oi”, responda como pessoa normal. Não faça relatório.
+- Só cite sensores se: o cliente pedir análise, houver alerta crítico, ou ajudar o próximo passo.
+
+COMPORTAMENTO IDEAL
+- Mensagem vaga: responda simples e puxe o próximo passo.
+- Problema relatado: resuma o que entendeu e faça uma pergunta curta.
+- No máximo 1 dado de telemetria por resposta, a menos que o cliente peça resumo geral.
+- Quando o cliente pedir resumo geral: cite só os dados fornecidos no contexto, de forma compacta, em no máximo 3 frases.
+
+PERGUNTAS FORA DE ESCOPO
+- Se o cliente perguntar algo que não é sobre o celular ou diagnóstico, diga de forma curta e educada que só cuida de diagnóstico Android e pergunte se tem algo no aparelho para ver.
+
+EXEMPLOS
+
+Cliente: “oi”
+“Oi, tudo certo. Me conta: tem algo no celular que precisa de atenção?”
+
+Cliente: “meu celular tá esquentando”
+“Entendi. Esse aquecimento aparece mais com algum app específico ou mesmo com o aparelho parado?”
+
+Cliente: “analisa meu aparelho”
+“Verificando agora. O armazenamento está em 90%, que é o ponto mais crítico. Quer que eu comece por aí?”
+
+Cliente: “me fala tudo do aparelho”
+“O mais relevante agora: temperatura em 75°C, armazenamento em 90% e sinal fraco. Quer que eu detalhe algum desses pontos?”
+
+Você deve agir sempre como um especialista real acompanhando um aparelho real, com presença calma, domínio técnico e comunicação limpa.`;
     }
 
     async chat(message, sensorData, context = {}) {
+        // Manter no máximo 6 mensagens no histórico (3 turnos)
+        if (this.history.length > 6) {
+            this.history = this.history.slice(-6);
+        }
+
         this.history.push({ role: 'user', content: message });
 
-        if (this.offline) {
-            const response = this._offlineReply(message, sensorData);
-            this.history.push({ role: 'assistant', content: response });
-            return { success: true, response, offline: true };
+        if (!this.apiKey) {
+            throw new Error('AI provider not configured');
         }
 
         try {
-            const response = await this._callDeepSeekAPI(message, sensorData, context);
+            const response = await this._callAIProvider(message, sensorData, context);
             this.history.push({ role: 'assistant', content: response });
-            return { success: true, response, offline: false, model: this.model };
+            return { success: true, response, model: this.model };
         } catch (err) {
-            console.error('[AI] DeepSeek API error:', err.message);
-            const response = this._offlineReply(message, sensorData);
-            this.history.push({ role: 'assistant', content: response });
-            return { success: true, response, offline: true, fallbackReason: err.message, model: this.model };
+            console.error(`[AI] ${this.providerLabel} API error:`, err.message);
+            throw err;
         }
     }
 
-    async _callDeepSeekAPI(message, sensorData, context = {}) {
+    _detectProvider() {
+        const explicit = (process.env.AI_PROVIDER || '').trim().toLowerCase();
+        if (explicit === 'deepseek' || explicit === 'openrouter') {
+            return explicit;
+        }
+
+        if (process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_MODEL) {
+            return 'openrouter';
+        }
+
+        if (process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_MODEL) {
+            return 'deepseek';
+        }
+
+        return 'openrouter';
+    }
+
+    _inferProviderFromConfig(key, model) {
+        const normalizedKey = (key || '').trim();
+        const normalizedModel = (model || '').trim().toLowerCase();
+
+        if (normalizedKey.startsWith('sk-or-')) {
+            return 'openrouter';
+        }
+
+        if (normalizedModel.includes('/') || normalizedModel.includes('openrouter') || normalizedModel.includes('openai/')) {
+            return 'openrouter';
+        }
+
+        if (normalizedModel.includes('deepseek')) {
+            return 'deepseek';
+        }
+
+        return this.provider || this._detectProvider();
+    }
+
+    async _callAIProvider(message, sensorData, context = {}) {
         let systemContent = this.systemPrompt;
-        
+        const vocabularyLevel = this._inferVocabularyLevel(message, context);
+        systemContent += this._vocabularyContext(vocabularyLevel);
+
+        // Injeta perfil real do dispositivo se disponível
+        if (context.device) {
+            systemContent += this._deviceProfileContext(context.device);
+        }
+
         // Verifica se há dispositivo conectado com dados reais
         const hasDevice = sensorData && (sensorData.cpu > 0 || sensorData.ram > 0 || sensorData.battery.level > 0);
-        
+
         if (hasDevice) {
             systemContent += this._sensorContext(sensorData);
         } else {
-            systemContent += `\n\n[SEM DISPOSITIVO CONECTADO]
-O usuário ainda não conectou um dispositivo Android. Seja acolhedor e ajude a começar.
-NÃO mencionei "bateria 0%" repetidamente - isso é redundante e chato.`;
+            systemContent += `\n\n[SEM DISPOSITIVO CONECTADO]\nNão há dispositivo Android conectado. Responda de forma curta e indique o próximo passo.`;
         }
 
         if (context.session) {
@@ -71,26 +203,29 @@ NÃO mencionei "bateria 0%" repetidamente - isso é redundante e chato.`;
         const body = {
             model: this.model,
             messages,
-            max_tokens: 4096,
-            temperature: 0.7
+            max_tokens: 600,
+            temperature: 0.3
         };
 
         return new Promise((resolve, reject) => {
             const data = JSON.stringify(body);
+            const baseUrl = new URL(this.apiBaseUrl);
+            const path = `${baseUrl.pathname.replace(/\/$/, '')}/chat/completions`;
             
             const options = {
-                hostname: 'api.deepseek.com',
-                port: 443,
-                path: '/chat/completions',
+                hostname: baseUrl.hostname,
+                port: baseUrl.port ? parseInt(baseUrl.port, 10) : 443,
+                path,
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${this.apiKey}`,
-                    'Content-Length': Buffer.byteLength(data)
+                    'Content-Length': Buffer.byteLength(data),
+                    ...this.extraHeaders
                 }
             };
 
-            console.log('[AI] Calling DeepSeek R1...');
+            console.log(`[AI] Calling ${this.providerLabel} (${this.model})...`);
 
             const req = https.request(options, (res) => {
                 let body = '';
@@ -101,7 +236,7 @@ NÃO mencionei "bateria 0%" repetidamente - isso é redundante e chato.`;
                             const json = JSON.parse(body);
                             let content = json.choices[0].message.content;
                             
-                            // DeepSeek R1 pode incluir reasoning_content
+                            // Algumas APIs podem incluir reasoning_content
                             const reasoning = json.choices[0].message.reasoning_content;
                             if (reasoning && reasoning.length > 0) {
                                 console.log('[AI] Reasoning tokens used:', reasoning.length);
@@ -118,10 +253,27 @@ NÃO mencionei "bateria 0%" repetidamente - isso é redundante e chato.`;
             });
 
             req.on('error', reject);
-            req.setTimeout(300000, () => { req.destroy(); reject(new Error('API timeout (>5min) - R1 pode demorar mais')) });
+            req.setTimeout(300000, () => { req.destroy(); reject(new Error('API timeout (>5min) - resposta demorou demais')) });
             req.write(data);
             req.end();
         });
+    }
+
+    _deviceProfileContext(d) {
+        if (!d || !d.model) return '';
+        const parts = [`\n\n[PERFIL DO DISPOSITIVO - DADOS REAIS]`];
+        if (d.brand) parts.push(`Marca: ${d.brand}`);
+        if (d.model) parts.push(`Modelo: ${d.model}`);
+        if (d.displayName) parts.push(`Nome: ${d.displayName}`);
+        if (d.chipset) parts.push(`Chipset: ${d.chipset}`);
+        if (d.android) parts.push(`Android: ${d.android}`);
+        if (d.androidSdk) parts.push(`API: ${d.androidSdk}`);
+        if (d.ramDisplay) parts.push(`RAM: ${d.ramDisplay}`);
+        if (d.storageDisplay) parts.push(`Armazenamento: ${d.storageDisplay}`);
+        if (d.securityPatch) parts.push(`Patch de segurança: ${d.securityPatch}`);
+        if (d.buildId) parts.push(`Build: ${d.buildId}`);
+        parts.push(`Estes são os únicos dados confirmados do aparelho. Não invente outros.`);
+        return parts.join('\n');
     }
 
     _sensorContext(s) {
@@ -134,93 +286,113 @@ Sinal Celular: ${s.signal} dBm
 Wi-Fi: ${s.wifi ? 'Conectado' : 'Desconectado'} | Bluetooth: ${s.bluetooth ? 'Ativo' : 'Inativo'} | Câmera: ${s.camera ? 'Disponível' : 'Indisponível'}`;
     }
 
-    _offlineReply(msg, s) {
-        const lower = msg.toLowerCase();
-        const ctx = s ? this._sensorContext(s) : '';
+    _inferVocabularyLevel(message, context = {}) {
+        const explicit = (context.userVocabulary || context.languageLevel || context.audienceLevel || '').trim().toLowerCase();
+        if (['tecnico', 'técnico', 'advanced', 'avancado', 'avançado'].includes(explicit)) return 'tecnico';
+        if (['leigo', 'simples', 'iniciante', 'basic', 'básico'].includes(explicit)) return 'leigo';
 
-        // Greeting
-        if (/^(oi|olá|ola|hello|hey|bom dia|boa tarde|boa noite|eai|e ai)/i.test(lower)) {
-            return 'Olá! Sou o AION Repair OS, seu assistente de diagnóstico Android.' + (ctx ? '\n\nVejo que temos um dispositivo conectado. ' + this._quickDiagnosis(s) : ' Conecte um dispositivo Android via USB para começarmos o diagnóstico.');
+        const recentUserText = this.history
+            .filter((entry) => entry.role === 'user')
+            .slice(-3)
+            .map((entry) => entry.content || '')
+            .join(' ');
+
+        const text = `${message || ''} ${recentUserText} ${context?.device?.brand || ''} ${context?.device?.model || ''}`
+            .toLowerCase();
+
+        const technicalMarkers = [
+            'adb', 'fastboot', 'bootloader', 'recovery', 'root', 'magisk', 'twrp',
+            'logcat', 'dumpsys', 'kernel', 'firmware', 'rom', 'ram', 'chipset',
+            'imei', 'serial', 'build', 'selinux', 'apk', 'package', 'telemetria',
+            'stack trace', 'dump', 'cache', 'partição'
+        ];
+        const layMarkers = [
+            'meu celular', 'meu telefone', 'tá', 'esta', 'está', 'travando',
+            'esquentando', 'desligando', 'não liga', 'nao liga', 'não carrega',
+            'nao carrega', 'tela preta', 'ficou lento', 'parou', 'bugou', 'quebrou'
+        ];
+
+        const techHits = technicalMarkers.filter((term) => text.includes(term)).length;
+        const layHits = layMarkers.filter((term) => text.includes(term)).length;
+
+        if (techHits >= 2 || (techHits >= 1 && /(?:adb|fastboot|bootloader|recovery|root|logcat|dumpsys|kernel|firmware|rom|ram|chipset|selinux|imei|serial)/.test(text))) {
+            return 'tecnico';
         }
 
-        // CPU
-        if (lower.includes('cpu') || lower.includes('processador') || lower.includes('lento') || lower.includes('travando')) {
-            if (!s) return 'Para diagnosticar a CPU, preciso de um dispositivo conectado. Conecte via USB com depuração ativada.';
-            if (s.cpu > 80) return `⚠️ CPU em ${s.cpu}% - Isso está alto!\n\nPossíveis causas:\n1. App em segundo plano consumindo recursos\n2. Thermal throttling\n3. Processo em loop\n\nAções recomendadas:\n- Force-stop em apps pesados\n- Verifique temperatura\n- Reinicie o dispositivo`;
-            return `✅ CPU em ${s.cpu}% - Dentro do normal. Se o dispositivo parece lento, pode ser outro fator (RAM, armazenamento cheio, etc). Quer que eu verifique algo mais?`;
+        if (layHits >= 2 && techHits === 0) {
+            return 'leigo';
         }
 
-        // RAM
-        if (lower.includes('ram') || lower.includes('memória') || lower.includes('memoria')) {
-            if (!s) return 'Preciso de um dispositivo conectado para verificar a memória RAM.';
-            if (s.ram > 85) return `⚠️ RAM em ${s.ram}% - Uso muito alto!\n\nIsso causa travamentos e lentidão.\n\nAções:\n- Feche apps em segundo plano\n- Limpe cache\n- Considere reiniciar`;
-            return `✅ RAM em ${s.ram}% - Uso normal. Se há travamentos, pode ser problema de CPU, armazenamento ou app específico.`;
+        return 'misto';
+    }
+
+    _vocabularyContext(level) {
+        if (level === 'tecnico') {
+            return `\n\n[AJUSTE DE TERMINOLOGIA]\nPerfil inferido: TECNICO\nUse termos técnicos corretos e diretos. Quando útil, mencione RAM, ROM, chipset, ADB, logs, kernel, firmware e sensores sem simplificar demais.`;
         }
 
-        // Battery
-        if (lower.includes('bateria') || lower.includes('battery') || lower.includes('carregando') || lower.includes('drenagem')) {
-            if (!s) return 'Conecte o dispositivo para verificar a bateria.';
-            if (s.battery.level < 20) return `⚠️ Bateria em ${s.battery.level}% - Crítico! Conecte ao carregador imediatamente.`;
-            return `Bateria em ${s.battery.level}% ${s.battery.charging ? '(Carregando)' : '(Descarregando)'}. ${s.battery.level > 80 ? 'Nível bom.' : 'Considere carregar em breve.'}`;
+        if (level === 'leigo') {
+            return `\n\n[AJUSTE DE TERMINOLOGIA]\nPerfil inferido: LEIGO\nUse linguagem simples e natural. Se precisar citar um termo técnico, explique em seguida em palavras comuns.`;
         }
 
-        // Temperature
-        if (lower.includes('temperatura') || lower.includes('esquentando') || lower.includes('quente') || lower.includes('aquecendo')) {
-            if (!s) return 'Conecte o dispositivo para verificar temperatura.';
-            if (s.temperature > 45) return `⚠️ Temperatura: ${s.temperature}°C - Elevada!\n\nRiscos:\n- Thermal throttling (redução de performance)\n- Degradação da bateria\n- Desligamento automático\n\nAções:\n- Remova capa protetora\n- Feche apps pesados\n- Deixe em local ventilado`;
-            return `Temperatura: ${s.temperature}°C - Dentro do normal (ideal: abaixo de 40°C).`;
-        }
-
-        // Storage
-        if (lower.includes('armazenamento') || lower.includes('storage') || lower.includes('disco') || lower.includes('espaço') || lower.includes('espaco')) {
-            if (!s) return 'Conecte o dispositivo para verificar armazenamento.';
-            if (s.disk > 90) return `⚠️ Armazenamento em ${s.disk}% - Quase cheio!\n\nIsso causa:\n- Lentidão extrema\n- Apps crashando\n- Impossibilidade de atualizar\n\nAções:\n- Delete fotos/vídeos desnecessários\n- Limpe cache de apps\n- Desinstale apps não usados`;
-            return `Armazenamento: ${s.disk}% usado - ${s.disk < 50 ? 'Bastante espaço livre.' : 'Começando a ficar cheio, considere limpar.'}`;
-        }
-
-        // WiFi/Network
-        if (lower.includes('wifi') || lower.includes('wi-fi') || lower.includes('internet') || lower.includes('rede') || lower.includes('sinal')) {
-            if (!s) return 'Conecte o dispositivo para verificar rede.';
-            return `Wi-Fi: ${s.wifi ? 'Conectado' : 'Desconectado'}\nSinal: ${s.signal} dBm\nBluetooth: ${s.bluetooth ? 'Ativo' : 'Inativo'}\n\n${!s.wifi && s.signal < -90 ? 'Sinal fraco detectado. Tente alternar Wi-Fi.' : s.wifi ? 'Conexão de rede parece OK.' : 'Wi-Fi desconectado.'}`;
-        }
-
-        // General diagnosis
-        if (lower.includes('diagnóstico') || lower.includes('diagnostico') || lower.includes('verificar') || lower.includes('como está') || lower.includes('como esta')) {
-            if (!s) return 'Nenhum dispositivo conectado. Conecte um Android via USB com depuração ativada.';
-            return this._quickDiagnosis(s);
-        }
-
-        // Help
-        if (lower.includes('ajuda') || lower.includes('help') || lower.includes('o que você faz') || lower.includes('o que vc faz')) {
-            return 'Posso ajudar com:\n\n• Diagnóstico de CPU, RAM, bateria, temperatura\n• Verificação de armazenamento e rede\n• Identificação de apps problemáticos\n• Sugestões de otimização\n• Execução de comandos ADB de reparo\n\nBasta descrever o problema ou perguntar sobre um sensor específico.';
-        }
-
-        // Default
-        return 'Entendi. Para dar uma resposta mais precisa, me conte mais detalhes sobre o problema. Posso verificar CPU, RAM, bateria, temperatura, armazenamento, rede e muito mais. O que está acontecendo com o dispositivo?';
+        return `\n\n[AJUSTE DE TERMINOLOGIA]\nPerfil inferido: MISTO\nUse uma linguagem clara e intermediária. Explique primeiro em palavras simples e use o termo técnico apenas quando ele ajudar a precisão.`;
     }
 
     _quickDiagnosis(s) {
         const issues = [];
-        if (s.cpu > 80) issues.push(`⚠️ CPU alta: ${s.cpu}%`);
-        if (s.ram > 85) issues.push(`⚠️ RAM alta: ${s.ram}%`);
-        if (s.temperature > 45) issues.push(`⚠️ Temperatura alta: ${s.temperature}°C`);
-        if (s.battery.level < 20) issues.push(`⚠️ Bateria baixa: ${s.battery.level}%`);
-        if (s.disk > 90) issues.push(`⚠️ Armazenamento quase cheio: ${s.disk}%`);
-        if (s.signal < -100) issues.push(`⚠️ Sinal fraco: ${s.signal} dBm`);
+        if (s.cpu > 80) issues.push(`CPU alta: ${s.cpu}%`);
+        if (s.ram > 85) issues.push(`RAM alta: ${s.ram}%`);
+        if (s.temperature > 45) issues.push(`Temperatura alta: ${s.temperature}°C`);
+        if (s.battery.level < 20) issues.push(`Bateria baixa: ${s.battery.level}%`);
+        if (s.disk > 90) issues.push(`Armazenamento quase cheio: ${s.disk}%`);
+        if (s.signal < -100) issues.push(`Sinal fraco: ${s.signal} dBm`);
 
         if (issues.length === 0) {
-            return `✅ Diagnóstico geral - Tudo parece normal:\n• CPU: ${s.cpu}%\n• RAM: ${s.ram}%\n• Temp: ${s.temperature}°C\n• Bateria: ${s.battery.level}%\n• Armazenamento: ${s.disk}%\n• Wi-Fi: ${s.wifi ? 'OK' : 'Off'}\n\nO dispositivo está em boas condições. Se há algum problema específico, me descreva.`;
+            return `Tudo parece normal: CPU ${s.cpu}%, RAM ${s.ram}%, temperatura ${s.temperature}°C, bateria ${s.battery.level}% e armazenamento ${s.disk}%.`;
         }
 
-        return `⚠️ Problemas detectados:\n${issues.join('\n')}\n\nDados completos:\n• CPU: ${s.cpu}%\n• RAM: ${s.ram}%\n• Temp: ${s.temperature}°C\n• Bateria: ${s.battery.level}%\n• Armazenamento: ${s.disk}%\n\nQuer que eu detalhe algum problema específico?`;
+        return `Problemas detectados: ${issues.join(' · ')}.`;
     }
 
-    setApiKey(key) { 
+    setApiKey(key, model = null) { 
+        this.provider = this._inferProviderFromConfig(key, model || this.model);
         this.apiKey = key; 
-        this.offline = false;
-        console.log('[AI] API key configured for DeepSeek R1');
+        if (model) {
+            this.model = model;
+        } else if (!this.model || this.model === 'deepseek-reasoner' || this.model === 'openai/gpt-oss-120b:free') {
+            this.model = this.provider === 'deepseek'
+                ? (process.env.DEEPSEEK_MODEL || 'deepseek-reasoner')
+                : (process.env.OPENROUTER_MODEL || 'openai/gpt-oss-120b:free');
+        }
+        this.apiBaseUrl = this.provider === 'deepseek'
+            ? (process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com')
+            : (process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1');
+        this.providerLabel = this.provider === 'deepseek' ? 'DeepSeek' : 'OpenRouter';
+        this.extraHeaders = this.provider === 'deepseek'
+            ? {}
+            : {
+                'HTTP-Referer': process.env.OPENROUTER_REFERER || 'http://localhost:3001',
+                'X-Title': process.env.OPENROUTER_APP_NAME || 'AION Repair OS'
+            };
+        console.log(`[AI] API key configured for ${this.providerLabel}`);
     }
-    setOffline() { this.offline = true; }
+
+    setModel(model) {
+        if (!model) return;
+
+        this.model = model;
+        this.provider = this._inferProviderFromConfig(this.apiKey || '', model);
+        this.apiBaseUrl = this.provider === 'deepseek'
+            ? (process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com')
+            : (process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1');
+        this.providerLabel = this.provider === 'deepseek' ? 'DeepSeek' : 'OpenRouter';
+        this.extraHeaders = this.provider === 'deepseek'
+            ? {}
+            : {
+                'HTTP-Referer': process.env.OPENROUTER_REFERER || 'http://localhost:3001',
+                'X-Title': process.env.OPENROUTER_APP_NAME || 'AION Repair OS'
+            };
+    }
     clearHistory() { this.history = []; }
 }
 

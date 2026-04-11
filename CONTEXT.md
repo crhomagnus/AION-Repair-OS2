@@ -1,290 +1,224 @@
-# AION Repair OS V7.0 - Documentação Técnica Completa
-
-## Visão Geral
-
-**AION Repair OS** é um sistema autônomo de diagnóstico e reparo para dispositivos Android. Desenvolvido em Node.js com frontend web em TailwindCSS, oferece telemetria em tempo real, chat com IA, console ADB interativo e captura forense.
-
----
-
-## Stack Tecnológica
-
-### Backend
-- **Runtime**: Node.js 20.20.2
-- **Framework**: Express 5.2.1
-- **WebSocket**: ws 8.20.0
-- **ADB Bridge**: adbkit 2.11.1
-- **Config**: dotenv 17.4.1
-
-### Frontend
-- **Framework CSS**: TailwindCSS (CDN)
-- **Fontes**: Inter, JetBrains Mono, Space Grotesk
-- **Ícones**: Material Symbols Outlined
-
-### Infraestrutura
-- **Sistema Operacional**: Kali Linux (Host)
-- **Depuração**: Android SDK / ADB (USB)
-
----
-
-## Configurações de Segurança
-
-### Keys e Tokens
-
-| Serviço | Key/Token | Status |
-|---------|-----------|--------|
-| OpenRouter API | `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` | ✅ Ativa |
-
-### Modelo AI
-- **Provider**: OpenRouter
-- **Modelo Padrão**: `openai/gpt-oss-120b:free`
-- **Temperatura**: 0.7
-- **Max Tokens**: 600
-
-### Validação de Comandos ADB
-- Whitelist de comandos permitidos
-- Padrões bloqueados (rm -rf, dd, mkfs, etc)
-- Limite de 1000 caracteres por comando
-
----
-
-## Arquitetura do Projeto
-
-```
-aion-repair-os/
-├── main.js                    # Entry point
-├── server/
-│   ├── index.js               # Servidor Express + WebSocket
-│   ├── adb-bridge.js         # Comunicação ADB via adbkit
-│   ├── sensor-poller.js       # Pipeline de 12 sensores
-│   ├── cmd-validator.js      # Camada de segurança
-│   ├── ai-agent.js           # Chat AI + fallback offline
-│   └── ai-executor.js        # Executor autônomo (Mestre Executor)
-├── web/
-│   └── index.html             # Dashboard Silicon Onyx
-├── .env                       # Configurações locais (NÃO COMMITAR)
-├── .env.example               # Template de configuração
-├── package.json
-├── README.md
-├── DESIGN.md                  # Sistema de design
-└── PROGRESS.md                # Histórico de desenvolvimento
-```
-
----
-
-## APIs e Endpoints
-
-### Servidor Principal
-```
-Porta: 3001 (configurável via PORT env)
-```
-
-### Endpoints REST
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/api/status` | Status do servidor e device |
-| GET | `/api/devices` | Lista dispositivos conectados |
-| POST | `/api/connect` | Conectar a dispositivo |
-| POST | `/api/execute` | Executar comando ADB |
-| GET | `/api/sensors` | Estado atual dos 12 sensores |
-| POST | `/api/chat` | Chat com IA |
-| GET | `/api/ai/status` | Status da IA (online/offline) |
-| POST | `/api/ai/key` | Definir API key |
-| GET | `/api/executor/status` | Status do executor autônomo |
-| POST | `/api/capture/forensic` | Iniciar captura forense |
-| GET | `/api/capture/forensic/:jobId` | Status da captura |
-
-### WebSocket
-```
-URL: ws://localhost:3001
-```
-
-**Mensagens de entrada:**
-```json
-{ "type": "chat", "message": "texto" }
-{ "type": "connect", "deviceId": "id" }
-{ "type": "set_api_key", "key": "sk-or-...", "model": "modelo" }
-{ "type": "ping" }
-```
-
-**Mensagens de saída:**
-```json
-{ "type": "telemetry", "data": { ... } }
-{ "type": "device_connected", "device": { ... } }
-{ "type": "chat_response", "response": "..." }
-{ "type": "adb_log", "command": "...", "result": "..." }
-{ "type": "executor_action", "cycle": 1, "actions": [...] }
-```
-
----
-
-## Os 12 Sensores
-
-| # | Sensor | Fonte ADB | Unidade |
-|---|--------|------------|---------|
-| 1 | CPU | `cat /proc/stat` | % |
-| 2 | RAM | `cat /proc/meminfo` | % |
-| 3 | GPU | `cat /sys/class/kgsl/kgsl-3d0/gpu_busy_percentage` | % |
-| 4 | Temperature | `cat /sys/class/thermal/thermal_zone*/temp` | °C |
-| 5 | Battery | `dumpsys battery` | % + status |
-| 6 | Disk | `df -h /data` | % |
-| 7 | Signal | `dumpsys telephony registry` | dBm |
-| 8 | Latency | `cat /proc/sched_debug` | ms |
-| 9 | Bluetooth | `dumpsys bluetooth_manager` | bool |
-| 10 | Wi-Fi | `dumpsys wifi` | bool |
-| 11 | Camera | `dumpsys media.camera` | bool |
-| 12 | Memory | `cat /proc/meminfo` | % |
-
----
-
-## Modo de Execução
-
-### Manual (Padrão)
-- Sistema monitora sensores
-- Usuário executa comandos via console ou chat
-
-### Executor Autônomo (Mestre Executor)
-- Toggle via sidebar
-- Ciclo a cada 10 segundos
-- Condições de ação:
-
-| Condição | Ação Automática |
-|----------|-----------------|
-| CPU > 90% + Temp > 45°C | Force-stop processos |
-| RAM > 85% + Latency > 20 | dumpsys meminfo |
-| Disk > 90% | pm clear downloads |
-| Battery < 20% | dumpsys battery |
-| Signal < -100 dBm | Toggle Wi-Fi |
-
----
-
-## Fail-Safe (Proteções)
-
-O sistema NÃO executa comandos bloqueados:
-
-### Padrões Bloqueados
-```
-rm -rf /      # Não apagar root
-dd            # Não escrever disco direto
-mkfs          # Não formatar
-reboot -f     # Não forçar reboot
-shutdown      # Não desligar
-; rm          # Não injetar rm
-$(...)        # Não command injection
-| sh          # Não pipe to shell
-```
-
-### Limites
-- Comandos: máx 1000 caracteres
-- Ciclo executor: 10 segundos
-- Timeout API AI: 30 segundos
-
----
-
-## Dificuldades e Problemas Resolvidos
-
-### 1. Porta 8081 em Uso
-**Problema**: O processo `node server.js` estava ocupando a porta 8081.
-
-**Solução**: Alterada porta para 3001, mais baixa e disponível.
-
-### 2. WebSocket Desconectado na UI
-**Problema**: UI não recebia telemetria em tempo real.
-
-**Solução**: Implementado `handleWSMessage()` para processar mensagens WebSocket e atualizar DOM dinamicamente.
-
-### 3. Design Não Integrado
-**Problema**: `code.html` tinha design premium mas não estava conectado ao backend.
-
-**Solução**: Migrado todo o design "Silicon Onyx" para `web/index.html` com integração completa.
-
-### 4. Dispositivo Não Detectado
-**Problema**: `adb devices` mostrava lista vazia.
-
-**Solução**: Verificar:
-- USB Debugging habilitado no Android
-- Cabo USB com transferência de dados (não só carga)
-- `adb kill-server && adb start-server`
-
-### 5. API Key Inválida
-**Problema**: AI ficava em modo offline.
-
-**Solução**: A key válida está configurada no `.env`. Para nova key, obter em https://openrouter.ai/keys
-
----
-
-## Variáveis de Ambiente
-
-Criar arquivo `.env` na raiz do projeto:
-
-```bash
-# API Key OpenRouter
-OPENROUTER_API_KEY=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
-
-# Modelo AI (opcional)
-OPENROUTER_MODEL=openai/gpt-oss-120b:free
-
-# Porta do servidor (opcional, padrão 3001)
-PORT=3001
-```
-
----
-
-## Comandos de Manutenção
-
-### Iniciar Servidor
-```bash
-cd /home/bluecamp/aion-repair-os
-npm start
-# ou
-PORT=3001 node main.js
-```
-
-### Verificar Processos
-```bash
-lsof -i :3001
-ps aux | grep node
-```
-
-### Reiniciar ADB
-```bash
-adb kill-server
-adb start-server
-adb devices
-```
-
-### Logs
-```bash
-# Ver logs do servidor
-tail -f /tmp/aion.log
-
-# Ver output em tempo real
-node main.js
-```
-
----
-
-## Melhorias Futuras (TODO)
-
-- [ ] Testes unitários com Jest
-- [ ] Documentação API com Swagger/OpenAPI
-- [ ] Modo offline aprimorado com NLP local
-- [ ] Dashboard para múltiplos dispositivos
-- [ ] Histórico de comandos e resultados
-- [ ] Exportação de relatórios em PDF
-- [ ] Sistema de alertas via Telegram/Discord
-- [ ] Machine Learning para predição de falhas
-
----
-
-## Créditos
-
-- **Desenvolvedor**: AION Team
-- **Design**: Sistema "Silicon Onyx" (precision engineering aesthetic)
-- **AI**: OpenRouter API (GPT-OSS 120B)
-- **ADB**: Android SDK Platform Tools
-
----
-
-*Última atualização: 2026-04-08*
-*Versão: 7.0.0*
+# AION Repair OS - Project Continuity Context
+
+Last updated: 2026-04-11
+Version: 7.0.2
+
+## Document Relationship
+
+This is the condensed continuity document.
+
+For the exhaustive project handoff, read [PROJECT_MASTER.md](/home/bluecamp/aion-repair-os/PROJECT_MASTER.md).
+
+## Purpose
+
+AION Repair OS is a web-based Android diagnostic and repair system. The user talks only to the AION assistant in the browser. The backend handles ADB, telemetry, policy checks, AI calls, and device profiling. The UI is intentionally button-light and log-heavy.
+
+## Non-Negotiable Rules
+
+- No offline AI fallback. If the provider is unavailable or not configured, the backend returns an error instead of inventing a local reply.
+- The user does not use shell commands in the UI.
+- The user only sends text messages to the assistant.
+- Command execution stays behind the backend policy layer.
+- High-risk actions require explicit confirmation and session mode checks.
+- Secrets must not be committed in raw form inside Markdown or source files.
+
+## Current Architecture
+
+### Runtime Flow
+
+1. `web/index.html` renders the dashboard, telemetry stream, device panel, audit log, and chat composer.
+2. The user sends text to `/api/chat`.
+3. `server/index.js` pulls current sensor state and session context.
+4. `server/ai-agent.js` sends the prompt plus live context to the configured AI provider.
+5. The current chat flow is text-first; the frontend has an action hook, but structured suggested actions are not emitted by default.
+6. `server/index.js` routes execution through `CmdValidator` and `AdbBridge`.
+7. Telemetry and audit events stream back through WebSocket.
+8. The app can run in a container with host networking so it can reach the VPS-side loopback tunnel.
+9. The local workstation runs `bridge/local-bridge.js`, which opens a secure SSH reverse tunnel from the phone-side ADB server to the VPS.
+
+### Core Modules
+
+| File | Status | Notes |
+|---|---|---|
+| `main.js` | Active | Loads `.env` and starts the server. |
+| `server/index.js` | Active | REST API, WebSocket, sessions, chat, command execution, AI config, forensic capture. |
+| `server/adb-bridge.js` | Active | Validates connected devices, reads props/memory/storage, builds device profiles. |
+| `server/device-profile.js` | Active | Resolves brand, model, chipset, memory, storage, and image metadata for the current device. |
+| `server/sensor-poller.js` | Active | Polls CPU, RAM, GPU, temperature, battery, storage, signal, latency, Bluetooth, Wi-Fi, camera, and memory. |
+| `server/cmd-validator.js` | Active | Whitelist, denylist, and risk tiers for ADB commands. |
+| `server/ai-agent.js` | Active | Web-only AI provider integration, adaptive vocabulary, no offline reply path. |
+| `server/ai-executor.js` | Present | Autonomous executor logic exists and can emit recommended actions. |
+| `bridge/local-bridge.js` | Active | Starts the local ADB server and opens the SSH reverse tunnel to the VPS. |
+| `web/index.html` | Active | Dark neon UI, buttonless interaction model, device image panel, telemetry, activity feed, chat. |
+
+## Current Implementation Status
+
+### Already Implemented
+
+- Dark, high-tech visual style with neon accents.
+- No visible terminal for the user.
+- Only Enter-to-send chat interaction.
+- Device profile panel with model image and hardware details.
+- Adaptive assistant language level: simple for lay users, technical for repair users.
+- No AI offline fallback.
+- ADB connection validation before session creation.
+- Real telemetry polling and streaming.
+- Policy-based command filtering.
+- Audit log and activity stream.
+
+### Needs Careful Attention
+
+- Hostinger deployment is not the same as local ADB execution.
+- A VPS can host the web/API layer, but direct USB ADB still requires a machine that can see the Android device, or a separate ADB relay architecture.
+- Raw credentials are intentionally not stored in this document.
+
+## API Surface
+
+### REST Endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/status` | Server, device, AI, and policy status. |
+| GET | `/api/devices` | List connected ADB devices. |
+| POST | `/api/connect` | Connect to a selected device. |
+| POST | `/api/sessions` | Create a session and optionally connect to a device. |
+| GET | `/api/sessions/:id` | Read a session. |
+| PATCH | `/api/sessions/:id` | Update session mode/status. |
+| POST | `/api/actions/dispatch` | Dispatch a typed action. |
+| POST | `/api/execute` | Execute a validated ADB command. |
+| POST | `/api/chat` | Send a user prompt to the AI provider. |
+| GET | `/api/ai/status` | AI provider status. |
+| POST | `/api/ai/key` | Update AI key/model in memory. |
+| GET | `/api/sensors` | Current telemetry snapshot. |
+| GET | `/api/audit` | Recent action log. |
+| GET | `/api/audit/session/:sessionId` | Session-specific audit log. |
+| POST | `/api/capture/forensic` | Start forensic capture job. |
+| GET | `/api/capture/forensic/:jobId` | Read forensic job progress. |
+
+### WebSocket Events
+
+- `connected`
+- `telemetry`
+- `device_connected`
+- `chat_response`
+- `adb_log`
+- `action_executed`
+- `ai_config`
+- `pong`
+- `error`
+
+## Environment Variables
+
+### Runtime
+
+| Variable | Purpose |
+|---|---|
+| `PORT` | HTTP port for the Node server. |
+| `HOST` | Bind host for the Node server. |
+| `ADB_HOST` | Hostname or IP for the ADB server used by `adbkit`. |
+| `ADB_PORT` | TCP port for the ADB server used by `adbkit`. |
+| `OPENROUTER_API_KEY` | Primary AI key when using OpenRouter. |
+| `OPENROUTER_MODEL` | OpenRouter model override. |
+| `OPENROUTER_API_BASE_URL` | OpenRouter base URL override. |
+| `OPENROUTER_REFERER` | HTTP referer header for OpenRouter. |
+| `OPENROUTER_APP_NAME` | X-Title header for OpenRouter. |
+| `DEEPSEEK_API_KEY` | Alternate AI key if DeepSeek is used. |
+| `DEEPSEEK_MODEL` | DeepSeek model override. |
+| `DEEPSEEK_API_BASE_URL` | DeepSeek base URL override. |
+| `AI_PROVIDER` | Explicit provider selector. |
+
+### Deployment and Continuity
+
+| Variable | Purpose |
+|---|---|
+| `HOSTINGER_API_TOKEN` | Hostinger API token for deployment automation. Redacted here on purpose. |
+| `HAPI_API_TOKEN` | Hostinger API CLI token source. Redacted here on purpose. |
+| `HOSTINGER_VM_ID` | Target VPS identifier if a Hostinger VPS is managed programmatically. |
+| `HOSTINGER_SSH_HOST` | SSH host for VPS deployment. |
+| `HOSTINGER_SSH_USER` | SSH username for VPS deployment. |
+| `HOSTINGER_SSH_PORT` | SSH port for VPS deployment. |
+| `BRIDGE_SSH_HOST` | VPS host used by the local ADB bridge tunnel. |
+| `BRIDGE_SSH_USER` | SSH user used by the local ADB bridge tunnel. |
+| `BRIDGE_SSH_PORT` | SSH port used by the local ADB bridge tunnel. |
+| `BRIDGE_SSH_KEY` | Local private key for the bridge tunnel. |
+| `BRIDGE_REMOTE_BIND` | Remote bind address for the forwarded ADB port. |
+| `BRIDGE_REMOTE_PORT` | Remote forwarded ADB port on the VPS. |
+| `BRIDGE_LOCAL_BIND` | Local bind address for the ADB server on the workstation. |
+| `BRIDGE_LOCAL_PORT` | Local ADB server port on the workstation. |
+
+## Secrets Policy
+
+This repository must not store raw secrets in Markdown. If a secret exists in the working machine, keep it in `.env`, a secret manager, or a deployment vault. For continuity, document:
+
+- secret name
+- where it is used
+- whether it is required
+- whether it is runtime or deployment-only
+
+Do not paste raw API keys, tokens, passwords, or private endpoints into docs.
+
+## External Services
+
+| Service | Use | Secret Needed |
+|---|---|---|
+| OpenRouter | AI chat provider | Yes |
+| DeepSeek | Alternate AI provider | Yes, if enabled |
+| Hostinger API | VPS/deployment management | Yes, if used |
+| ADB / adbkit | Local Android device access | No external secret, but USB or network transport is required |
+| Wikimedia Commons / Wikidata / GSMArena image lookup | Device profile image resolution | No |
+
+## Hostinger Transfer Reality
+
+Full "move everything to Hostinger" is not equivalent to full local execution.
+
+- The web UI can run anywhere.
+- The Node API can run on a VPS.
+- The ADB bridge needs a machine that can actually see the phone, unless the device is reachable over network ADB or a relay service.
+- Docker deployment is now supported through `Dockerfile` and `docker-compose.yml`.
+
+If the target is a Hostinger VPS, the safe architecture is:
+
+1. Hostinger hosts the web/API layer.
+2. A local companion bridge keeps USB ADB access to the phone.
+3. The two sides communicate over a secure SSH reverse tunnel.
+4. The bridge binds the remote ADB port to VPS loopback only.
+5. The VPS container reaches that loopback through host networking.
+
+## Quick Resume Guide for Another AI
+
+If another AI opens this repo, the fastest path is:
+
+1. Read this file.
+2. Read `updates/README.md`.
+3. Read `updates/v7.0.2/README.md`.
+4. Check `server/index.js` for the live API contract.
+5. Check `server/ai-agent.js` for the current prompt and vocabulary rules.
+6. Check `web/index.html` for the current UI flow.
+7. Run `npm start`.
+8. Open `http://127.0.0.1:3001`.
+9. Verify `/api/status`, `/api/devices`, `/api/sensors`, and `/api/chat`.
+
+## Current Snapshot
+
+- The assistant is configured as AION in Portuguese (Brazil).
+- The UI is dark, neon, and mostly read-only.
+- The assistant adapts to lay users or repair technicians.
+- Offline AI replies are disabled.
+- The device profile panel resolves model-specific images and hardware data.
+- The Hostinger VPS deployment is live through Docker on `http://31.97.83.152:3002`.
+- The remote container now sees the local phone through the SSH reverse tunnel on host port `5037`.
+- The bridge process lives in `bridge/local-bridge.js` and is run on the workstation with the phone connected by USB.
+- Current worktree contains uncommitted changes and should be read carefully before any refactor.
+
+## Update Index
+
+- `updates/v7.0.2/README.md` contains the current implementation snapshot.
+- Future improvements should get their own versioned folder under `updates/`.
+
+## Notes for Future Maintenance
+
+- Keep secrets out of Markdown.
+- Keep the prompt short enough to stay responsive, but precise enough to preserve behavior.
+- Keep the UI buttonless unless the product requirements change.
+- If Hostinger deployment is required, define the target first: VPS, Git deployment, or a local bridge plus remote dashboard.
+- If the AI provider changes, update `server/ai-agent.js`, `server/index.js`, and this file together.

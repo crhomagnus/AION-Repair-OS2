@@ -1,0 +1,15 @@
+services:
+  aion-repair-os:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aion-repair-os
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3002
+      ADB_HOST: 127.0.0.1
+      ADB_PORT: 5037

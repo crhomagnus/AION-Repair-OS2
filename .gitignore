@@ -4,5 +4,6 @@ node_modules/
 bridge/.env
 !.env.example
 *.log
+data/
 coverage/
 .DS_Store

@@ -21,7 +21,7 @@
   "license": "MIT",
   "description": "AION Repair OS V7.0 - Autonomous Android Diagnostic System",
   "dependencies": {
-    "adbkit": "^2.11.1",
+    "@devicefarmer/adbkit": "^3.3.8",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
     "ws": "^8.20.0"

@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+node_modules
+npm-debug.log
+*.log
+screen.png
+code.html
+README.md
+PROGRESS.md
+CONTEXT.md
+HOSTINGER_TRANSFER.md
+updates

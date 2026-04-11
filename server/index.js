@@ -194,6 +194,17 @@ class AIONServer {
             catch (err) { res.status(500).json({ error: err.message }); }
         });
 
+        // Connection diagnostics — shows all devices including problematic ones
+        this.app.get('/api/devices/diagnose', async (req, res) => {
+            try { res.json(await this.adb.diagnose()); }
+            catch (err) { res.status(500).json({ error: err.message }); }
+        });
+
+        // Connection status with pending devices info
+        this.app.get('/api/devices/status', (req, res) => {
+            res.json(this.adb.getConnectionStatus());
+        });
+
         this.app.post('/api/connect', async (req, res) => {
             const { deviceId } = req.body;
             if (!deviceId) return res.status(400).json({ error: 'deviceId required' });
@@ -488,6 +499,11 @@ class AIONServer {
             log.info('Device removed', { id, model: previous?.displayName || 'unknown' });
             this.sensors.stop();
             this.broadcast({ type: 'device_disconnected', deviceId: id, device: previous });
+        });
+
+        this.adb.on('device_issue', (issue) => {
+            log.warn('Device issue detected', { deviceId: issue.deviceId, title: issue.title, severity: issue.severity });
+            this.broadcast({ type: 'device_issue', ...issue });
         });
 
         this.adb.startTracking();

@@ -61,9 +61,12 @@ describe('Server integration', () => {
     });
 
     after(async () => {
+        if (serverInstance?.sensors) serverInstance.sensors.stop();
         if (serverInstance?.server) {
             await new Promise((resolve) => serverInstance.server.close(resolve));
         }
+        // Stop tracking AFTER server close to prevent reconnect loop
+        if (serverInstance?.adb) serverInstance.adb.stopTracking();
     });
 
     describe('GET /api/health', () => {

@@ -44,6 +44,7 @@ class AIONServer {
         this._setupRoutes();
         this._setupWS();
         this._startTelemetry();
+        this._startDeviceTracking();
     }
 
     _requireAdmin(req, res, next) {
@@ -476,6 +477,22 @@ class AIONServer {
         this.sensors.on('data', (data) => this.broadcast({ type: 'telemetry', data }));
     }
 
+    _startDeviceTracking() {
+        this.adb.on('device_connected', (deviceInfo) => {
+            log.info('Auto-detected device', { id: deviceInfo.id, model: deviceInfo.displayName || deviceInfo.model });
+            this.sensors.start();
+            this.broadcast({ type: 'device_connected', device: deviceInfo });
+        });
+
+        this.adb.on('device_disconnected', ({ id, previous }) => {
+            log.info('Device removed', { id, model: previous?.displayName || 'unknown' });
+            this.sensors.stop();
+            this.broadcast({ type: 'device_disconnected', deviceId: id, device: previous });
+        });
+
+        this.adb.startTracking();
+    }
+
     broadcast(msg) {
         const payload = JSON.stringify(msg);
         for (const client of this.clients) {
@@ -655,6 +672,7 @@ class AIONServer {
         // Graceful shutdown
         const shutdown = (signal) => {
             log.info(`Received ${signal}, shutting down gracefully...`);
+            this.adb.stopTracking();
             this.sensors.stop();
 
             // Close all WebSocket connections

@@ -8,7 +8,11 @@ const SensorPoller = require('./sensor-poller');
 const CmdValidator = require('./cmd-validator');
 const AiAgent = require('./ai-agent');
 const AiExecutor = require('./ai-executor');
+const { createLogger } = require('./logger');
+const Store = require('./store');
 const { version: appVersion } = require('../package.json');
+
+const log = createLogger('server');
 
 class AIONServer {
     constructor() {
@@ -17,6 +21,7 @@ class AIONServer {
         this.wss = new WebSocket.Server({ server: this.server });
         this.clients = new Set();
 
+        this.store = new Store();
         this.adb = new AdbBridge();
         this.sensors = new SensorPoller(this.adb);
         this.validator = new CmdValidator();
@@ -28,8 +33,6 @@ class AIONServer {
         this.adminToken = process.env.ADMIN_TOKEN || null;
         this.corsOrigin = process.env.CORS_ORIGIN || null;
 
-        this.sessions = new Map();
-        this.actionLog = [];
         this.captureJobs = new Map();
         this._startedAt = Date.now();
 
@@ -133,7 +136,7 @@ class AIONServer {
                 updated_at: new Date().toISOString()
             };
 
-            this.sessions.set(sessionId, session);
+            this.store.setSession(sessionId, session);
             this._logAction(sessionId, 'SESSION_CREATED', { mode, consent }, 'LOW');
 
             // Connect device
@@ -142,20 +145,20 @@ class AIONServer {
                 session.device_info = deviceInfo;
                 await this.sensors.start();
             } catch (err) {
-                console.warn('[Session] Device connection warning:', err.message);
+                log.warn('Device connection warning', { error: err.message });
             }
 
             res.status(201).json({ sessionId, ...session });
         });
 
         this.app.get('/api/sessions/:id', (req, res) => {
-            const session = this.sessions.get(req.params.id);
+            const session = this.store.getSession(req.params.id);
             if (!session) return res.status(404).json({ error: 'Session not found' });
             res.json(session);
         });
 
         this.app.patch('/api/sessions/:id', (req, res) => {
-            const session = this.sessions.get(req.params.id);
+            const session = this.store.getSession(req.params.id);
             if (!session) return res.status(404).json({ error: 'Session not found' });
             
             if (req.body.status) session.status = req.body.status;
@@ -175,7 +178,7 @@ class AIONServer {
                 device: this.adb.deviceInfo,
                 aiMode: this.ai.apiKey ? 'ONLINE' : 'AI_UNAVAILABLE',
                 aiModel: this.ai.model,
-                activeSessions: this.sessions.size,
+                activeSessions: this.store.sessionCount,
                 policyEngine: {
                     status: 'ACTIVE',
                     allowList: true,
@@ -209,7 +212,7 @@ class AIONServer {
                 return res.status(400).json({ error: 'action_type required' });
             }
 
-            const session = session_id ? this.sessions.get(session_id) : null;
+            const session = session_id ? this.store.getSession(session_id) : null;
             const riskLevel = this._getRiskLevel(action_type, payload);
 
             // HIGH risk requires explicit session
@@ -266,7 +269,7 @@ class AIONServer {
 
                 // Check session mode for HIGH risk commands
                 if (validation.risk === 'HIGH' && sessionId) {
-                    const session = this.sessions.get(sessionId);
+                    const session = this.store.getSession(sessionId);
                     if (!session || session.mode === 'diagnostic') {
                         return res.status(403).json({ 
                             error: 'Command requires REPAIR or FORENSIC session mode',
@@ -290,7 +293,7 @@ class AIONServer {
             
             try {
                 const sensorData = this.sensors.getState();
-                const session = sessionId ? this.sessions.get(sessionId) : null;
+                const session = sessionId ? this.store.getSession(sessionId) : null;
                 
                 const result = await this.ai.chat(message, sensorData, {
                     session,
@@ -335,12 +338,11 @@ class AIONServer {
         // === AUDIT LOG ===
         this.app.get('/api/audit', (req, res) => {
             const limit = parseInt(req.query.limit) || 100;
-            res.json(this.actionLog.slice(-limit));
+            res.json(this.store.getRecentAudit(limit));
         });
 
         this.app.get('/api/audit/session/:sessionId', (req, res) => {
-            const logs = this.actionLog.filter(log => log.session_id === req.params.sessionId);
-            res.json(logs);
+            res.json(this.store.getSessionAudit(req.params.sessionId));
         });
 
         // === FORENSIC CAPTURE ===
@@ -376,6 +378,28 @@ class AIONServer {
             const job = this.captureJobs.get(req.params.jobId);
             if (!job) return res.status(404).json({ error: 'Job not found' });
             res.json(job);
+        });
+
+        // === AI EXECUTOR (opt-in autonomous mode) ===
+        this.app.get('/api/executor/status', (req, res, next) => this._requireAdmin(req, res, next), (req, res) => {
+            const enabled = process.env.EXECUTOR_ENABLED === 'true';
+            res.json({
+                enabled,
+                ...this.executor.getStatus()
+            });
+        });
+
+        this.app.post('/api/executor/evaluate', (req, res, next) => this._requireAdmin(req, res, next), async (req, res) => {
+            if (process.env.EXECUTOR_ENABLED !== 'true') {
+                return res.status(403).json({ error: 'Executor is disabled. Set EXECUTOR_ENABLED=true to enable.' });
+            }
+            try {
+                const result = await this.executor.execute();
+                this._logAction(null, 'EXECUTOR_EVALUATE', { actions: result.actions.length }, 'MEDIUM');
+                res.json(result);
+            } catch (err) {
+                res.status(500).json({ error: err.message });
+            }
         });
     }
 
@@ -502,12 +526,7 @@ class AIONServer {
             status: 'logged',
             timestamp: new Date().toISOString()
         };
-        this.actionLog.push(log);
-        
-        // Keep only last 1000 entries
-        if (this.actionLog.length > 1000) {
-            this.actionLog = this.actionLog.slice(-1000);
-        }
+        this.store.appendAudit(log);
     }
 
     _getHelpText() {
@@ -607,12 +626,20 @@ class AIONServer {
 
     start() {
         this.server.on('error', (err) => {
-            console.error('[Server] Failed to start:', err.message);
+            log.error('Failed to start server', { error: err.message });
             process.exitCode = 1;
         });
 
         this.server.listen(this.port, this.host, () => {
             const displayHost = this.host === '0.0.0.0' ? 'localhost' : this.host;
+            log.info('Server started', {
+                url: `http://${displayHost}:${this.port}`,
+                version: appVersion,
+                aiMode: this.ai.apiKey ? 'ONLINE' : 'AI_UNAVAILABLE',
+                aiModel: this.ai.model,
+                policy: 'ACTIVE',
+                sessions: this.store.sessionCount
+            });
             console.log('');
             console.log('╔═══════════════════════════════════════════════════════╗');
             console.log('║         AION REPAIR OS V7.0 - AGENTIC MODE           ║');
@@ -620,10 +647,45 @@ class AIONServer {
             console.log(`║  Dashboard:    http://${displayHost}:${this.port}                   ║`);
             console.log(`║  AI Mode:      ${this.ai.apiKey ? 'ONLINE (' + this.ai.model + ')' : 'AI_UNAVAILABLE'}    ║`);
             console.log(`║  Policy:       ACTIVE (Allow/Deny + Human Confirm)  ║`);
-            console.log(`║  Sessions:     ${String(this.sessions.size).padStart(3)} active                         ║`);
+            console.log(`║  Sessions:     ${String(this.store.sessionCount).padStart(3)} active                         ║`);
             console.log('╚═══════════════════════════════════════════════════════╝');
             console.log('');
         });
+
+        // Graceful shutdown
+        const shutdown = (signal) => {
+            log.info(`Received ${signal}, shutting down gracefully...`);
+            this.sensors.stop();
+
+            // Close all WebSocket connections
+            for (const client of this.clients) {
+                try { client.close(1001, 'Server shutting down'); } catch {}
+            }
+            this.clients.clear();
+
+            // Close WebSocket server
+            this.wss.close(() => {
+                log.info('WebSocket server closed');
+            });
+
+            // Flush store
+            this.store.close();
+
+            // Close HTTP server
+            this.server.close(() => {
+                log.info('HTTP server closed');
+                process.exit(0);
+            });
+
+            // Force exit after 10s if graceful shutdown stalls
+            setTimeout(() => {
+                log.warn('Graceful shutdown timed out, forcing exit');
+                process.exit(1);
+            }, 10000).unref();
+        };
+
+        process.on('SIGINT', () => shutdown('SIGINT'));
+        process.on('SIGTERM', () => shutdown('SIGTERM'));
     }
 }
 

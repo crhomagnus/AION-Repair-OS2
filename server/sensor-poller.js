@@ -1,30 +1,71 @@
 const EventEmitter = require('events');
+const { createLogger } = require('./logger');
+
+const pollLog = createLogger('sensor-poller');
 
 class SensorPoller extends EventEmitter {
     constructor(adb) {
         super();
         this.adb = adb;
         this.running = false;
+        this._consecutiveErrors = 0;
+        this._pollInterval = Number(process.env.SENSOR_POLL_INTERVAL || 500);
+        this._maxConsecutiveErrors = 10;
+        this._pollTimer = null;
         this.state = { cpu: 0, ram: 0, gpu: 0, temperature: 0, battery: { level: 0, charging: false }, disk: 0, signal: -1, latency: 0, bluetooth: false, wifi: false, camera: false, memory: 0 };
     }
 
     async start() {
         if (this.running) return;
         this.running = true;
+        this._consecutiveErrors = 0;
+        pollLog.info('Sensor polling started');
         this._poll();
     }
 
-    stop() { this.running = false; }
+    stop() {
+        this.running = false;
+        if (this._pollTimer) {
+            clearTimeout(this._pollTimer);
+            this._pollTimer = null;
+        }
+        pollLog.info('Sensor polling stopped');
+    }
 
     async _poll() {
-        if (!this.running || !this.adb.isConnected()) {
-            if (this.running) setTimeout(() => this._poll(), 500);
+        if (!this.running) return;
+
+        if (!this.adb.isConnected()) {
+            this._consecutiveErrors++;
+            if (this._consecutiveErrors === 1 || this._consecutiveErrors % 20 === 0) {
+                pollLog.warn('Device not connected, waiting...', { consecutiveErrors: this._consecutiveErrors });
+            }
+            this.emit('device_lost');
+            const backoff = Math.min(this._pollInterval * Math.pow(2, Math.min(this._consecutiveErrors, 6)), 30000);
+            this._pollTimer = setTimeout(() => this._poll(), backoff);
             return;
         }
+
         try {
             const [cpu, ram, gpu, temp, battery, disk, signal, latency, bt, wifi, cam, memory] = await Promise.allSettled([
                 this._cpu(), this._ram(), this._gpu(), this._temp(), this._battery(), this._disk(), this._signal(), this._latency(), this._bt(), this._wifi(), this._camera(), this._memory()
             ]);
+
+            const failedCount = [cpu, ram, gpu, temp, battery, disk, signal, latency, bt, wifi, cam, memory]
+                .filter(r => r.status === 'rejected').length;
+
+            if (failedCount === 12) {
+                this._consecutiveErrors++;
+                if (this._consecutiveErrors >= this._maxConsecutiveErrors) {
+                    pollLog.error('All sensors failed, device may be disconnected', { consecutiveErrors: this._consecutiveErrors });
+                    this.emit('device_lost');
+                }
+            } else {
+                if (this._consecutiveErrors > 0) {
+                    pollLog.info('Sensor polling recovered', { previousErrors: this._consecutiveErrors });
+                }
+                this._consecutiveErrors = 0;
+            }
 
             this.state = {
                 cpu: cpu.status === 'fulfilled' ? cpu.value : this.state.cpu,
@@ -42,8 +83,13 @@ class SensorPoller extends EventEmitter {
             };
 
             this.emit('data', { ...this.state, timestamp: Date.now() });
-        } catch {}
-        if (this.running) setTimeout(() => this._poll(), 500);
+        } catch (err) {
+            this._consecutiveErrors++;
+            pollLog.error('Poll cycle failed', { error: err.message });
+        }
+        if (this.running) {
+            this._pollTimer = setTimeout(() => this._poll(), this._pollInterval);
+        }
     }
 
     async _exec(cmd) {

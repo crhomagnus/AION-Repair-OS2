@@ -1,11 +1,11 @@
-const adb = require('adbkit');
+const { Adb } = require('@devicefarmer/adbkit');
 const { buildDeviceProfile } = require('./device-profile');
 
 class AdbBridge {
     constructor() {
         this.host = process.env.ADB_HOST || '127.0.0.1';
         this.port = Number(process.env.ADB_PORT) || 5037;
-        this.client = adb.createClient({ host: this.host, port: this.port });
+        this.client = Adb.createClient({ host: this.host, port: this.port });
         this.deviceId = null;
         this.deviceInfo = null;
     }

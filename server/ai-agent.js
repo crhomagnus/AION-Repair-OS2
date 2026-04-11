@@ -131,7 +131,22 @@ Você deve agir sempre como um especialista real acompanhando um aparelho real, 
             this.history.push({ role: 'assistant', content: response });
             return { success: true, response, model: this.model };
         } catch (err) {
-            console.error(`[AI] ${this.providerLabel} API error:`, err.message);
+            const errorMsg = err.message || 'Unknown error';
+            console.error(`[AI] ${this.providerLabel} API error:`, errorMsg);
+
+            // Return a structured error instead of crashing
+            if (errorMsg.includes('timeout') || errorMsg.includes('ETIMEDOUT')) {
+                throw new Error('O provedor de IA demorou demais para responder. Tente novamente em alguns segundos.');
+            }
+            if (errorMsg.includes('429') || errorMsg.includes('rate limit')) {
+                throw new Error('Limite de requisições atingido no provedor de IA. Aguarde um momento.');
+            }
+            if (errorMsg.includes('401') || errorMsg.includes('403')) {
+                throw new Error('Chave de API inválida ou sem permissão. Verifique a configuração.');
+            }
+            if (errorMsg.includes('500') || errorMsg.includes('502') || errorMsg.includes('503')) {
+                throw new Error('O provedor de IA está temporariamente indisponível. Tente novamente.');
+            }
             throw err;
         }
     }

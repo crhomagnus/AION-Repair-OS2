@@ -1,94 +1,41 @@
-# AION Repair OS V7.0 - Mestre Executor
+# AION Repair OS
 
-Sistema de diagnóstico e reparo autonomous para dispositivos Android.
+See [PROJECT_MASTER.md](/home/bluecamp/aion-repair-os/PROJECT_MASTER.md) for the exhaustive handoff doc.
+See [CONTEXT.md](/home/bluecamp/aion-repair-os/CONTEXT.md) for the current continuity doc, status map, secrets policy, and update index.
 
-## Instalação
+## Quick Start
 
 ```bash
 npm install
+npm start
 ```
 
-## Execução
+Open the UI at `http://127.0.0.1:3001`.
+
+## Docker
 
 ```bash
-npm start
-# Servidor disponível em http://localhost:3001
+docker compose up -d --build
 ```
 
-## Conectar Dispositivo Android
+The container runs on host network mode in the VPS deployment and expects AI credentials in `.env`.
+The public app is on `http://31.97.83.152:3002`.
 
-1. Habilite USB Debugging no dispositivo Android
-2. Conecte via USB
-3. Clique no ícone de engrenagem para selecionar dispositivo
-4. O sistema começará a monitorar automaticamente
+## Local Bridge
 
-## API Endpoints
-
-- `GET /api/status` - Status do servidor
-- `GET /api/devices` - Lista dispositivos conectados
-- `POST /api/connect` - Conectar a um dispositivo
-- `POST /api/execute` - Executar comando ADB
-- `GET /api/sensors` - Estado atual dos sensores
-
-## WebSocket
-
-Conecte-se em `ws://localhost:3001` para streaming de telemetria em tempo real.
-
-### Mensagens:
-
-**Enviar:**
-```json
-{ "type": "connect", "deviceId": "device_id" }
-{ "type": "execute", "command": "am force-stop com.android.systemui" }
-{ "type": "ai_command", "order": "optimize" }
+```bash
+npm run bridge
 ```
 
-**Receber:**
-```json
-{ "type": "telemetry", "data": { "cpu": 45, "ram": 62, ... } }
-{ "type": "executive_order", "action": "am force-stop ..." }
-{ "type": "alert", "severity": "WARNING", "message": "..." }
-```
+The bridge script opens a secure SSH reverse tunnel from the workstation with the phone to the VPS.
 
-## 12 Sensores
+## What This Project Does
 
-1. CPU - Carga do processador
-2. RAM - Uso de memória
-3. Temperature - Temperatura do SoC
-4. Battery - Nível e status de carga
-5. Disk I/O - Uso do armazenamento
-6. Signal - Intensidade do sinal celular
-7. Latency - Latência do kernel
-8. GPU - Carga da GPU
-9. Bluetooth - Status
-10. Wi-Fi - Status
-11. Camera - Status
-12. Memory - Uso de memória do sistema
+- Web-based Android diagnostic and repair interface.
+- ADB-backed telemetry and command execution.
+- AI assistant with adaptive vocabulary for lay users and repair technicians.
+- Dark neon UI with telemetry, audit, and device profile panels.
 
-## Segurança
+## Important Constraint
 
-- Validação de comandos via whitelist
-- Padrões bloqueados (rm -rf, dd, etc)
-- Fail-safe: Desconexão se TEMP > 52°C ou VOLTAGE < 3.2V
-
-## Estrutura do Projeto
-
-```
-aion-repair-os/
-├── server/
-│   ├── index.js         # Servidor principal
-│   ├── adb-bridge.js    # Comunicação ADB
-│   ├── sensor-poller.js # Pipeline de sensores
-│   ├── cmd-validator.js # Camada de segurança
-│   └── ai-executor.js   # Lógica autônoma
-├── web/
-│   └── index.html       # Dashboard V7.0
-├── main.js              # Entry point
-└── package.json
-```
-
-## Requisitos
-
-- Node.js 18+
-- Android SDK (adb)
-- Dispositivo Android com USB Debugging
+- Full Hostinger deployment is not the same as USB ADB control of a local phone. See `HOSTINGER_TRANSFER.md`, `bridge/README.md`, and `CONTEXT.md` for the deployment boundary.

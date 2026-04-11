@@ -5,7 +5,10 @@
   "scripts": {
     "start": "node main.js",
     "dev": "node main.js",
-    "bridge": "node bridge/local-bridge.js"
+    "bridge": "node bridge/local-bridge.js",
+    "test": "node --test test/*.test.js",
+    "test:unit": "node --test test/cmd-validator.test.js test/device-profile.test.js",
+    "test:integration": "node --test test/server-integration.test.js"
   },
   "keywords": [
     "android",

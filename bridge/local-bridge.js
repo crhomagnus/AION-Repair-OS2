@@ -1,4 +1,5 @@
 const { spawn } = require('child_process');
+const net = require('net');
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -17,11 +18,36 @@ const cfg = {
     adbBin: process.env.BRIDGE_ADB_BIN || 'adb',
     sshBin: process.env.BRIDGE_SSH_BIN || 'ssh',
     keepAliveInterval: Number(process.env.BRIDGE_KEEPALIVE_INTERVAL || 15),
-    keepAliveCountMax: Number(process.env.BRIDGE_KEEPALIVE_COUNT_MAX || 3)
+    keepAliveCountMax: Number(process.env.BRIDGE_KEEPALIVE_COUNT_MAX || 3),
+    healthCheckInterval: Number(process.env.BRIDGE_HEALTH_CHECK_INTERVAL || 30000),
+    reconnectDelay: Number(process.env.BRIDGE_RECONNECT_DELAY || 5000),
+    maxReconnectDelay: Number(process.env.BRIDGE_MAX_RECONNECT_DELAY || 60000)
 };
 
+const stats = {
+    startedAt: null,
+    reconnects: 0,
+    lastConnectedAt: null,
+    lastDisconnectedAt: null,
+    healthChecks: 0,
+    healthFailures: 0,
+    tunnelUp: false
+};
+
+function ts() {
+    return new Date().toISOString();
+}
+
+function log(msg) {
+    console.log(`[${ts()}] [bridge] ${msg}`);
+}
+
+function logError(msg) {
+    console.error(`[${ts()}] [bridge] ${msg}`);
+}
+
 function fail(message) {
-    console.error(`[bridge] ${message}`);
+    logError(`FATAL: ${message}`);
     process.exit(1);
 }
 
@@ -50,10 +76,45 @@ async function ensureAdbServer() {
     try {
         await runAdb(['start-server']);
         const { stdout } = await runAdb(['devices', '-l']);
-        console.log('[bridge] ADB server is ready');
-        console.log(stdout.trim() || '[bridge] no devices reported yet');
+        log('ADB server is ready');
+        log(stdout.trim() || 'no devices reported yet');
     } catch (err) {
         fail(`ADB server check failed: ${err.message}`);
+    }
+}
+
+function checkLocalAdb() {
+    return new Promise((resolve) => {
+        const sock = net.createConnection({ host: cfg.localBind, port: cfg.localPort }, () => {
+            sock.destroy();
+            resolve(true);
+        });
+        sock.setTimeout(3000);
+        sock.on('timeout', () => { sock.destroy(); resolve(false); });
+        sock.on('error', () => resolve(false));
+    });
+}
+
+async function healthCheck() {
+    stats.healthChecks++;
+    const adbOk = await checkLocalAdb();
+    if (!adbOk) {
+        stats.healthFailures++;
+        logError(`HEALTH: local ADB not reachable at ${cfg.localBind}:${cfg.localPort} (failure #${stats.healthFailures})`);
+        try {
+            await runAdb(['start-server']);
+            log('HEALTH: ADB server restarted');
+        } catch (e) {
+            logError(`HEALTH: failed to restart ADB server: ${e.message}`);
+        }
+        return;
+    }
+    if (!stats.tunnelUp) {
+        logError(`HEALTH: tunnel is down, waiting for reconnect...`);
+        return;
+    }
+    if (stats.healthChecks % 10 === 0) {
+        log(`HEALTH: ok | uptime ${Math.round((Date.now() - stats.startedAt) / 1000)}s | reconnects ${stats.reconnects} | checks ${stats.healthChecks}`);
     }
 }
 
@@ -73,19 +134,30 @@ function launchTunnel() {
         `${cfg.sshUser}@${cfg.sshHost}`
     ];
 
-    console.log(`[bridge] opening SSH tunnel to ${cfg.sshUser}@${cfg.sshHost}:${cfg.sshPort}`);
-    console.log(`[bridge] remote port ${cfg.remoteBind}:${cfg.remotePort} -> local ${cfg.localBind}:${cfg.localPort}`);
+    log(`opening SSH tunnel to ${cfg.sshUser}@${cfg.sshHost}:${cfg.sshPort}`);
+    log(`remote ${cfg.remoteBind}:${cfg.remotePort} -> local ${cfg.localBind}:${cfg.localPort}`);
 
     const child = spawn(cfg.sshBin, args, { stdio: 'inherit' });
 
+    child.on('spawn', () => {
+        stats.tunnelUp = true;
+        stats.lastConnectedAt = Date.now();
+        log('TUNNEL: SSH process started');
+    });
+
     child.on('error', err => {
-        console.error(`[bridge] SSH error: ${err.message}`);
+        stats.tunnelUp = false;
+        logError(`TUNNEL: SSH error: ${err.message}`);
     });
 
     child.on('exit', (code, signal) => {
+        stats.tunnelUp = false;
+        stats.lastDisconnectedAt = Date.now();
         if (stopping) return;
-        console.error(`[bridge] SSH tunnel exited (${signal || code}). Reconnecting in 3s...`);
-        setTimeout(launchTunnel, 3000);
+        stats.reconnects++;
+        const delay = Math.min(cfg.reconnectDelay * Math.pow(2, Math.min(stats.reconnects - 1, 5)), cfg.maxReconnectDelay);
+        logError(`TUNNEL: exited (${signal || code}). Reconnect #${stats.reconnects} in ${delay / 1000}s...`);
+        setTimeout(() => { tunnel = launchTunnel(); }, delay);
     });
 
     return child;
@@ -93,19 +165,26 @@ function launchTunnel() {
 
 let stopping = false;
 let tunnel = null;
+let healthTimer = null;
 
 async function main() {
+    stats.startedAt = Date.now();
     assertConfig();
     await ensureAdbServer();
     tunnel = launchTunnel();
+    healthTimer = setInterval(healthCheck, cfg.healthCheckInterval);
+    log(`health check every ${cfg.healthCheckInterval / 1000}s`);
 }
 
 function shutdown(signal) {
     stopping = true;
-    console.log(`[bridge] received ${signal}, shutting down`);
+    log(`received ${signal}, shutting down`);
+    if (healthTimer) clearInterval(healthTimer);
     if (tunnel && !tunnel.killed) {
         tunnel.kill('SIGTERM');
     }
+    const uptime = stats.startedAt ? Math.round((Date.now() - stats.startedAt) / 1000) : 0;
+    log(`session summary: uptime ${uptime}s, reconnects ${stats.reconnects}, health checks ${stats.healthChecks}, failures ${stats.healthFailures}`);
     process.exit(0);
 }
 

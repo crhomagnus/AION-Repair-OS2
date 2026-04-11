@@ -1,0 +1,26 @@
+[Unit]
+Description=AION Repair OS - Local ADB Bridge
+Documentation=file:///home/bluecamp/aion-repair-os/bridge/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bluecamp
+WorkingDirectory=/home/bluecamp/aion-repair-os
+ExecStart=/usr/bin/node bridge/local-bridge.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aion-bridge
+
+# Safety limits
+TimeoutStartSec=30
+TimeoutStopSec=15
+
+# Environment
+EnvironmentFile=-/home/bluecamp/aion-repair-os/bridge/.env
+
+[Install]
+WantedBy=multi-user.target

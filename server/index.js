@@ -22,20 +22,71 @@ class AIONServer {
         this.validator = new CmdValidator();
         this.ai = new AiAgent(this.adb, this.validator);
         this.executor = new AiExecutor(this.sensors, this.validator, this.adb);
-        
+
         this.port = Number(process.env.PORT) || 3001;
         this.host = process.env.HOST || '127.0.0.1';
-        
+        this.adminToken = process.env.ADMIN_TOKEN || null;
+        this.corsOrigin = process.env.CORS_ORIGIN || null;
+
         this.sessions = new Map();
         this.actionLog = [];
         this.captureJobs = new Map();
+        this._startedAt = Date.now();
+
+        // Rate limiting state
+        this._rateLimits = new Map();
+        this._rateLimitWindow = Number(process.env.RATE_LIMIT_WINDOW || 60000);
+        this._rateLimitMax = Number(process.env.RATE_LIMIT_MAX || 30);
 
         this._setupRoutes();
         this._setupWS();
         this._startTelemetry();
     }
 
+    _requireAdmin(req, res, next) {
+        if (!this.adminToken) return next();
+        const token = req.headers['x-admin-token'] || req.query.admin_token;
+        if (token !== this.adminToken) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        next();
+    }
+
+    _rateLimit(key, req, res, next) {
+        const ip = req.ip || req.socket.remoteAddress;
+        const id = `${key}:${ip}`;
+        const now = Date.now();
+        let entry = this._rateLimits.get(id);
+        if (!entry || now - entry.windowStart > this._rateLimitWindow) {
+            entry = { windowStart: now, count: 0 };
+            this._rateLimits.set(id, entry);
+        }
+        entry.count++;
+        if (entry.count > this._rateLimitMax) {
+            return res.status(429).json({ error: 'Too many requests' });
+        }
+        next();
+    }
+
     _setupRoutes() {
+        // CORS
+        this.app.use((req, res, next) => {
+            const origin = this.corsOrigin || req.headers.origin || '*';
+            res.setHeader('Access-Control-Allow-Origin', this.corsOrigin || '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Token');
+            if (req.method === 'OPTIONS') return res.status(204).end();
+            next();
+        });
+
+        // Security headers
+        this.app.use((req, res, next) => {
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('X-Frame-Options', 'DENY');
+            res.setHeader('X-XSS-Protection', '1; mode=block');
+            next();
+        });
+
         this.app.use(express.static(path.join(__dirname, '../web'), {
             setHeaders: (res) => {
                 res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -43,7 +94,23 @@ class AIONServer {
                 res.setHeader('Expires', '0');
             }
         }));
-        this.app.use(express.json());
+        this.app.use(express.json({ limit: '1mb' }));
+
+        // === HEALTH CHECK ===
+        this.app.get('/api/health', (req, res) => {
+            const adbOk = this.adb.isConnected();
+            const aiOk = Boolean(this.ai.apiKey);
+            res.status(adbOk || aiOk ? 200 : 503).json({
+                status: adbOk || aiOk ? 'healthy' : 'degraded',
+                version: appVersion,
+                uptime: Math.round((Date.now() - this._startedAt) / 1000),
+                checks: {
+                    adb: adbOk ? 'connected' : 'disconnected',
+                    ai: aiOk ? 'configured' : 'unconfigured',
+                    websocket: `${this.clients.size} clients`
+                }
+            });
+        });
 
         // === SESSION MANAGEMENT (PRD) ===
         this.app.post('/api/sessions', async (req, res) => {
@@ -174,7 +241,7 @@ class AIONServer {
         });
 
         // === COMMAND EXECUTION ===
-        this.app.post('/api/execute', async (req, res) => {
+        this.app.post('/api/execute', (req, res, next) => this._rateLimit('execute', req, res, next), async (req, res) => {
             const { command, sessionId } = req.body;
             if (!command) return res.status(400).json({ error: 'command required' });
             
@@ -217,7 +284,7 @@ class AIONServer {
         });
 
         // === CHAT WITH AGENTIC AI ===
-        this.app.post('/api/chat', async (req, res) => {
+        this.app.post('/api/chat', (req, res, next) => this._rateLimit('chat', req, res, next), async (req, res) => {
             const { message, sessionId, context } = req.body;
             if (!message) return res.status(400).json({ error: 'message required' });
             
@@ -253,7 +320,7 @@ class AIONServer {
             });
         });
 
-        this.app.post('/api/ai/key', (req, res) => {
+        this.app.post('/api/ai/key', (req, res, next) => this._requireAdmin(req, res, next), (req, res) => {
             const { key, model } = req.body;
             if (key) this.ai.setApiKey(key, model);
             else if (model) this.ai.setModel(model);
@@ -313,16 +380,29 @@ class AIONServer {
     }
 
     _setupWS() {
-        this.wss.on('connection', (ws) => {
+        this.wss.on('connection', (ws, req) => {
+            // Rate limit WebSocket connections per IP
+            const ip = req.socket.remoteAddress;
+            const wsConns = [...this.clients].filter(c => c._aionIp === ip).length;
+            if (wsConns >= 10) {
+                ws.close(1008, 'Too many connections');
+                return;
+            }
+            ws._aionIp = ip;
+
             this.clients.add(ws);
-            ws.send(JSON.stringify({ 
-                type: 'connected', 
+            ws.send(JSON.stringify({
+                type: 'connected',
                 mode: this.ai.apiKey ? 'ONLINE' : 'AI_UNAVAILABLE',
                 version: appVersion
             }));
 
             ws.on('message', async (raw) => {
                 try {
+                    if (raw.length > 65536) {
+                        ws.send(JSON.stringify({ type: 'error', message: 'Message too large' }));
+                        return;
+                    }
                     const data = JSON.parse(raw);
                     await this._handleWS(ws, data);
                 } catch { ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' })); }
@@ -355,6 +435,10 @@ class AIONServer {
                 break;
             }
             case 'set_api_key': {
+                if (this.adminToken && data.admin_token !== this.adminToken) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Unauthorized' }));
+                    break;
+                }
                 if (data.key) this.ai.setApiKey(data.key, data.model);
                 else if (data.model) this.ai.setModel(data.model);
                 ws.send(JSON.stringify({ type: 'ai_config', configured: Boolean(this.ai.apiKey), model: this.ai.model }));

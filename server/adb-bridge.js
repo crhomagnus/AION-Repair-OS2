@@ -1,8 +1,11 @@
 const adb = require('adbkit');
+const { buildDeviceProfile } = require('./device-profile');
 
 class AdbBridge {
     constructor() {
-        this.client = adb.createClient({ host: '127.0.0.1', port: 5037 });
+        this.host = process.env.ADB_HOST || '127.0.0.1';
+        this.port = Number(process.env.ADB_PORT) || 5037;
+        this.client = adb.createClient({ host: this.host, port: this.port });
         this.deviceId = null;
         this.deviceInfo = null;
     }
@@ -15,6 +18,11 @@ class AdbBridge {
     }
 
     async connect(deviceId) {
+        const devices = await this.listDevices();
+        if (!devices.some(device => device.id === deviceId)) {
+            throw new Error(`Device not found or not authorized: ${deviceId}`);
+        }
+
         this.deviceId = deviceId;
         await this._getDeviceInfo();
         return this.deviceInfo;
@@ -24,22 +32,39 @@ class AdbBridge {
         try {
             const run = async (cmd) => {
                 const stream = await this.client.shell(this.deviceId, cmd);
-                return new Promise((resolve) => {
+                return new Promise((resolve, reject) => {
                     const chunks = [];
                     stream.on('data', c => chunks.push(c));
                     stream.on('end', () => resolve(Buffer.concat(chunks).toString().trim()));
+                    stream.on('error', reject);
                 });
             };
-            const [model, manufacturer, android, brand] = await Promise.all([
-                run('getprop ro.product.model'),
-                run('getprop ro.product.manufacturer'),
-                run('getprop ro.build.version.release'),
-                run('getprop ro.product.brand')
+
+            const [props, memInfo, storageInfo] = await Promise.all([
+                run('getprop'),
+                run('cat /proc/meminfo'),
+                run('df -k /storage/emulated/0')
             ]);
-            this.deviceInfo = { id: this.deviceId, model, manufacturer, android, brand };
+
+            this.deviceInfo = await buildDeviceProfile(this.deviceId, props, memInfo, storageInfo);
         } catch {
-            this.deviceInfo = { id: this.deviceId, model: 'Unknown', manufacturer: '', android: '', brand: '' };
+            this.deviceInfo = {
+                id: this.deviceId,
+                serial: this.deviceId,
+                model: 'Unknown',
+                manufacturer: '',
+                android: '',
+                brand: '',
+                chipset: 'Unknown',
+                ramDisplay: '--',
+                storageDisplay: '--',
+                imageUrl: '',
+                imageSource: 'local-fallback',
+                displayName: 'Unknown device'
+            };
         }
+
+        return this.deviceInfo;
     }
 
     async execute(command) {

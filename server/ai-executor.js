@@ -1,7 +1,10 @@
 const uuidv4 = () => Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
 
-class AiExecutor {
+const EventEmitter = require('events');
+
+class AiExecutor extends EventEmitter {
     constructor(sensors, validator, adb) {
+        super();
         this.sensors = sensors;
         this.validator = validator;
         this.adb = adb;
@@ -125,6 +128,7 @@ class AiExecutor {
     }
 
     emitThought(thought) {
+        this.emit('thought', thought);
         console.log(`[AION] ${thought.hypothesis} (Priority: ${thought.priority})`);
     }
 

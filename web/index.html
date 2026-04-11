@@ -1,826 +1,1611 @@
 <!DOCTYPE html>
-<html class="dark" lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>AION Repair OS V7 - Agentic Android Repair</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-<script>
-tailwind.config = {
-    darkMode: "class",
-    theme: {
-        extend: {
-            colors: {
-                "inverse-on-surface": "#313030",
-                "outline-variant": "#454652",
-                "on-background": "#e5e2e1",
-                "surface-dim": "#131313",
-                "surface-container-low": "#1c1b1b",
-                "surface-variant": "#353534",
-                "primary-container": "#5e6ad2",
-                "on-surface": "#e5e2e1",
-                "on-error": "#690005",
-                "primary": "#bdc2ff",
-                "secondary": "#44f7cd",
-                "error": "#ffb4ab",
-                "surface-container-lowest": "#0e0e0e",
-                "surface-container-high": "#2a2a2a",
-                "surface-container-highest": "#353534",
-                "surface-container": "#201f1f",
-                "surface-tint": "#bdc2ff",
-                "error-container": "#93000a",
-                "secondary-container": "#00dab2",
-                "on-primary-container": "#fdfaff",
-                "on-secondary-container": "#005a48",
-                "on-secondary": "#00382c",
-                "on-surface-variant": "#c6c5d5",
-                "on-tertiary": "#313030",
-                "surface": "#131313",
-                "inverse-surface": "#e5e2e1",
-                "inverse-primary": "#4854bb",
-                "background": "#131313",
-                "warning": "#ffb74d",
-                "warning-container": "#5d4037"
-            },
-            borderRadius: {
-                "DEFAULT": "0.125rem",
-                "lg": "0.25rem",
-                "xl": "0.5rem",
-                "full": "0.75rem"
-            },
-            fontFamily: {
-                "headline": ["Inter"],
-                "body": ["Inter"],
-                "label": ["Space Grotesk"],
-                "mono": ["JetBrains Mono"]
-            }
-        }
-    }
-}
-</script>
 <style>
-.material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    vertical-align: middle;
+:root {
+    --bg: #04060b;
+    --surface: rgba(8, 13, 24, 0.88);
+    --surface-strong: rgba(10, 16, 30, 0.97);
+    --line: rgba(93, 129, 255, 0.18);
+    --text: #edf4ff;
+    --muted: #8d9fbe;
+    --accent: #36f8ff;
+    --accent-2: #ac6dff;
+    --warn: #ffc85f;
+    --danger: #ff6f93;
+    --good: #5cf3b4;
+    --shadow: 0 34px 92px rgba(0, 0, 0, 0.55);
 }
-.neon-pulse {
-    box-shadow: 0 0 15px rgba(68, 247, 205, 0.3);
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+    margin: 0;
+    color: var(--text);
+    background:
+        radial-gradient(1100px 720px at 14% 8%, rgba(54, 248, 255, 0.14), transparent 42%),
+        radial-gradient(960px 620px at 86% 16%, rgba(172, 109, 255, 0.16), transparent 44%),
+        radial-gradient(700px 480px at 50% 108%, rgba(92, 243, 180, 0.08), transparent 40%),
+        linear-gradient(180deg, #04060b 0%, #060913 44%, #030509 100%);
+    font-family: "Sora", system-ui, sans-serif;
+    overflow: hidden;
 }
-.glass-panel {
-    background: rgba(42, 42, 42, 0.4);
-    backdrop-filter: blur(20px);
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(93,129,255,0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(93,129,255,0.055) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.9));
+    opacity: 0.42;
 }
-.custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
+
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 20% 18%, rgba(54, 248, 255, 0.08), transparent 18%),
+        radial-gradient(circle at 80% 24%, rgba(172, 109, 255, 0.08), transparent 22%),
+        radial-gradient(circle at 50% 100%, rgba(54, 248, 255, 0.05), transparent 26%);
+    mix-blend-mode: screen;
+    opacity: 0.85;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
+
+.shell {
+    position: relative;
+    z-index: 1;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    padding: 16px 18px;
+    border: 1px solid rgba(93, 129, 255, 0.20);
+    background: linear-gradient(180deg, rgba(10, 16, 30, 0.94), rgba(7, 11, 20, 0.94));
+    backdrop-filter: blur(22px) saturate(1.1);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), var(--shadow);
+}
+
+.brand {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-width: 0;
+}
+
+.brand-mark {
+    width: 56px;
+    height: 56px;
+    border: 1px solid rgba(54, 248, 255, 0.28);
+    background:
+        radial-gradient(circle at 30% 25%, rgba(54, 248, 255, 0.22), transparent 48%),
+        linear-gradient(135deg, rgba(54, 248, 255, 0.16), rgba(172, 109, 255, 0.14));
+    display: grid;
+    place-items: center;
+    flex: none;
+    box-shadow: 0 0 0 1px rgba(54, 248, 255, 0.08), 0 0 26px rgba(54, 248, 255, 0.12);
+}
+
+.brand-mark .material-symbols-outlined {
+    font-size: 30px;
+    color: var(--accent);
+    filter: drop-shadow(0 0 12px rgba(54, 248, 255, 0.55));
+}
+
+.brand-copy {
+    min-width: 0;
+}
+
+.brand-kicker {
+    font-family: "Sora", sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+    text-shadow: 0 0 16px rgba(54, 248, 255, 0.24);
+}
+
+.brand-title {
+    font-family: "Sora", sans-serif;
+    font-size: clamp(1.35rem, 2vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(172, 109, 255, 0.12);
+}
+
+.brand-subtitle {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.status-strip {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid rgba(93, 129, 255, 0.20);
+    background: linear-gradient(180deg, rgba(10, 16, 30, 0.90), rgba(7, 11, 20, 0.90));
+    color: var(--text);
+    font-size: 11px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 0 24px rgba(54, 248, 255, 0.06);
+}
+
+.status-chip:nth-child(1) {
+    border-color: rgba(54, 248, 255, 0.24);
+}
+
+.status-chip:nth-child(2) {
+    border-color: rgba(172, 109, 255, 0.24);
+}
+
+.status-chip:nth-child(1) .material-symbols-outlined {
+    color: var(--accent);
+    filter: drop-shadow(0 0 10px rgba(54, 248, 255, 0.5));
+}
+
+.status-chip:nth-child(2) .material-symbols-outlined {
+    color: var(--accent-2);
+    filter: drop-shadow(0 0 10px rgba(172, 109, 255, 0.5));
+}
+
+.status-chip .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.workspace {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr) 340px;
+    gap: 16px;
+}
+
+.panel {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(93, 129, 255, 0.18);
+    background: linear-gradient(180deg, rgba(8, 13, 24, 0.92), rgba(6, 10, 18, 0.96));
+    backdrop-filter: blur(18px) saturate(1.1);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), var(--shadow);
+    overflow: hidden;
+}
+
+.panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid rgba(93, 129, 255, 0.16);
+}
+
+.panel-kicker {
+    font-family: "Sora", sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.panel-note {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.sensor-stream {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.sensor-row {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 16px 13px;
+    border-bottom: 1px solid rgba(93, 129, 255, 0.08);
+    background: linear-gradient(90deg, transparent, rgba(54, 248, 255, 0.02) 40%, transparent);
+}
+
+.sensor-row:last-child { border-bottom: none; }
+
+.sensor-icon {
+    color: var(--accent);
+    font-size: 18px;
+}
+
+.sensor-copy {
+    min-width: 0;
+}
+
+.sensor-label {
+    font-family: "Sora", sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.sensor-desc {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.sensor-value {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    color: var(--accent);
+    text-align: right;
+    text-shadow: 0 0 16px rgba(54, 248, 255, 0.18);
+}
+
+.sensor-bar {
+    grid-column: 2 / 4;
+    height: 2px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: -3px;
+}
+
+.sensor-bar span {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    border-radius: inherit;
+    transition: width 280ms ease;
+}
+
+.sensor-row[data-tone="warn"] .sensor-value { color: var(--warn); }
+.sensor-row[data-tone="danger"] .sensor-value { color: var(--danger); }
+.sensor-row[data-tone="good"] .sensor-value { color: var(--good); }
+.sensor-row[data-tone="warn"] .sensor-icon { color: var(--warn); }
+.sensor-row[data-tone="danger"] .sensor-icon { color: var(--danger); }
+.sensor-row[data-tone="good"] .sensor-icon { color: var(--good); }
+
+.left-footer {
+    padding: 12px 16px 14px;
+    border-top: 1px solid rgba(93, 129, 255, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+}
+
+.left-footer .line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.left-footer .line .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--accent);
+}
+
+.chat-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.chat-stream {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 14px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bubble {
+    max-width: min(88%, 900px);
+    padding: 12px 14px;
+    border: 1px solid rgba(93, 129, 255, 0.16);
+    background: linear-gradient(180deg, rgba(10, 16, 30, 0.88), rgba(6, 10, 18, 0.95));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.bubble.user {
+    align-self: flex-end;
+    background: linear-gradient(180deg, rgba(172, 109, 255, 0.18), rgba(172, 109, 255, 0.08));
+    border-color: rgba(172, 109, 255, 0.28);
+}
+
+.bubble.agent {
+    align-self: flex-start;
+    background: linear-gradient(180deg, rgba(54, 248, 255, 0.10), rgba(54, 248, 255, 0.04));
+    border-color: rgba(54, 248, 255, 0.24);
+}
+
+.bubble.system {
+    align-self: center;
+    max-width: 100%;
+    background: rgba(255,255,255,0.02);
+}
+
+.bubble-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+.bubble-text {
+    white-space: pre-wrap;
+    line-height: 1.58;
+    font-size: 14px;
+}
+
+.bubble-text code {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.95em;
+    color: var(--accent);
+}
+
+.composer {
+    border-top: 1px solid rgba(93, 129, 255, 0.18);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background: linear-gradient(180deg, rgba(10, 16, 30, 0.84), rgba(6, 10, 18, 0.88));
+}
+
+.composer .material-symbols-outlined {
+    color: var(--accent);
+    font-size: 18px;
+    flex: none;
+}
+
+.composer input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
     background: transparent;
+    color: var(--text);
+    font-family: "Sora", sans-serif;
+    font-size: 14px;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(189, 194, 255, 0.1);
-    border-radius: 10px;
+
+.composer input::placeholder { color: rgba(148, 162, 191, 0.72); }
+
+.composer-hint {
+    padding: 0 16px 14px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
 }
-.risk-low { background: rgba(68, 247, 205, 0.2); border-color: #44f7cd; }
-.risk-medium { background: rgba(255, 183, 77, 0.2); border-color: #ffb74d; }
-.risk-high { background: rgba(255, 180, 171, 0.2); border-color: #ffb4ab; }
-.timeline-line {
-    background: linear-gradient(to bottom, #44f7cd, #5e6ad2);
+
+.activity-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.activity-stream {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 14px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.feed-item {
+    position: relative;
+    border: 1px solid rgba(93, 129, 255, 0.14);
+    border-left-width: 2px;
+    background: linear-gradient(180deg, rgba(10, 16, 30, 0.84), rgba(6, 10, 18, 0.92));
+    padding: 11px 12px 11px 13px;
+    overflow: hidden;
+}
+
+.feed-item .meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.feed-item .title {
+    margin-top: 7px;
+    font-family: "Sora", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+}
+
+.feed-item .body {
+    margin-top: 6px;
+    white-space: pre-wrap;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text);
+}
+
+.feed-item.system .title { color: var(--accent); }
+.feed-item.command .title { color: var(--accent-2); }
+.feed-item.audit .title { color: var(--warn); }
+.feed-item.warning .title { color: var(--danger); }
+.feed-item.session .title { color: var(--good); }
+
+.feed-item.system { border-left-color: rgba(54, 248, 255, 0.58); }
+.feed-item.command { border-left-color: rgba(172, 109, 255, 0.58); }
+.feed-item.audit { border-left-color: rgba(255, 200, 95, 0.58); }
+.feed-item.warning { border-left-color: rgba(255, 111, 147, 0.58); }
+.feed-item.session { border-left-color: rgba(92, 243, 180, 0.58); }
+
+.device-showcase {
+    padding: 12px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.device-frame {
+    position: relative;
+    min-height: 360px;
+    padding: 18px 18px 96px;
+    border: 1px solid rgba(93, 129, 255, 0.20);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(54, 248, 255, 0.16), transparent 36%),
+        radial-gradient(circle at 18% 20%, rgba(54, 248, 255, 0.14), transparent 28%),
+        radial-gradient(circle at 80% 26%, rgba(172, 109, 255, 0.18), transparent 38%),
+        linear-gradient(180deg, rgba(13, 19, 34, 0.98), rgba(5, 8, 14, 0.99));
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 48px rgba(54, 248, 255, 0.06);
+}
+
+.device-frame::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    pointer-events: none;
+}
+
+.device-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), transparent 16%),
+        linear-gradient(90deg, rgba(255,255,255,0.02), transparent 18%, transparent 82%, rgba(255,255,255,0.02)),
+        linear-gradient(180deg, transparent 0%, transparent 48%, rgba(54, 248, 255, 0.08) 49%, transparent 51%, transparent 100%);
+    pointer-events: none;
+}
+
+.device-frame img {
+    position: relative;
+    z-index: 1;
+    width: min(86%, 360px);
+    max-height: 430px;
+    object-fit: contain;
+    filter: drop-shadow(0 30px 50px rgba(0, 0, 0, 0.55)) saturate(1.02);
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+    transition: opacity 360ms ease, transform 360ms ease;
+}
+
+.device-frame img.is-loaded {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.device-frame.fallback img {
+    width: min(90%, 380px);
+}
+
+.device-frame .device-overlay {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    z-index: 2;
+    display: grid;
+    gap: 5px;
+    padding: 12px 14px 11px;
+    background: linear-gradient(180deg, rgba(5, 8, 14, 0.60), rgba(5, 8, 14, 0.94));
+    border: 1px solid rgba(54, 248, 255, 0.16);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 18px 30px rgba(0, 0, 0, 0.24);
+}
+
+.device-stage-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Sora", sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.device-stage-kicker::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--accent), rgba(54, 248, 255, 0.32));
+    box-shadow: 0 0 0 4px rgba(54, 248, 255, 0.08);
+}
+
+.device-stage-title {
+    font-family: "Sora", sans-serif;
+    font-size: clamp(1.3rem, 2vw, 1.75rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    text-shadow: 0 0 16px rgba(172, 109, 255, 0.14);
+}
+
+.device-stage-meta,
+.device-stage-source {
+    color: rgba(232, 238, 251, 0.84);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.device-stage-source {
+    color: var(--muted);
+}
+
+.device-spec-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    border: 1px solid rgba(93, 129, 255, 0.16);
+    background: linear-gradient(180deg, rgba(9, 14, 25, 0.95), rgba(6, 10, 18, 0.98));
+    overflow: hidden;
+}
+
+.spec-card {
+    padding: 12px 12px 11px;
+    border-right: 1px solid rgba(93, 129, 255, 0.10);
+    border-bottom: 1px solid rgba(93, 129, 255, 0.10);
+    background: transparent;
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+.spec-card:nth-child(2n) { border-right: 0; }
+.spec-card:nth-last-child(-n + 2) { border-bottom: 0; }
+
+.spec-card .label {
+    display: block;
+    font-family: "Sora", sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.spec-card .value {
+    display: block;
+    margin-top: 0;
+    color: #f3f6ff;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    line-height: 1.28;
+    word-break: break-word;
+    text-align: right;
+}
+
+.device-footer {
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    border: 1px solid rgba(93, 129, 255, 0.16);
+    background: linear-gradient(180deg, rgba(9, 14, 25, 0.92), rgba(6, 10, 18, 0.96));
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.device-footer .kv {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 3px;
+    min-width: 0;
+    padding: 10px 12px 11px;
+    border-right: 1px solid rgba(93, 129, 255, 0.10);
+    border-bottom: 1px solid rgba(93, 129, 255, 0.10);
+}
+
+.device-footer .kv:nth-child(4n) { border-right: 0; }
+.device-footer .kv span:last-child {
+    color: var(--text);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.scrollbar::-webkit-scrollbar,
+.sensor-stream::-webkit-scrollbar,
+.chat-stream::-webkit-scrollbar,
+.activity-stream::-webkit-scrollbar { width: 6px; }
+
+.scrollbar::-webkit-scrollbar-thumb,
+.sensor-stream::-webkit-scrollbar-thumb,
+.chat-stream::-webkit-scrollbar-thumb,
+.activity-stream::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(54, 248, 255, 0.38), rgba(172, 109, 255, 0.38));
+    border-radius: 999px;
+}
+
+.scrollbar::-webkit-scrollbar-track,
+.sensor-stream::-webkit-scrollbar-track,
+.chat-stream::-webkit-scrollbar-track,
+.activity-stream::-webkit-scrollbar-track { background: transparent; }
+
+@media (max-width: 1220px) {
+    body { overflow: auto; }
+    .shell { height: auto; min-height: 100vh; }
+    .workspace { grid-template-columns: 300px minmax(0, 1fr); }
+    .activity-panel { grid-column: 1 / -1; min-height: 320px; }
+}
+
+@media (max-width: 880px) {
+    .shell { padding: 12px; }
+    .topbar { flex-direction: column; align-items: flex-start; }
+    .status-strip { justify-content: flex-start; }
+    .workspace { grid-template-columns: 1fr; }
+    .panel { min-height: 320px; }
+    .activity-panel { grid-column: auto; }
+    .device-spec-grid { grid-template-columns: 1fr; }
+    .device-footer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .spec-card { border-right: 0; }
+    .spec-card:not(:last-child) { border-bottom: 1px solid rgba(168, 182, 255, 0.09); }
+    .spec-card:last-child { border-bottom: 0; }
 }
 </style>
 </head>
-<body class="bg-background text-on-surface font-body h-screen flex flex-col overflow-hidden">
+<body>
+<div class="shell">
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-mark">
+                <span class="material-symbols-outlined">psychology</span>
+            </div>
+            <div class="brand-copy">
+                <div class="brand-kicker">AION REPAIR OS</div>
+                <div class="brand-title">Agentic Android Repair</div>
+                <div class="brand-subtitle" id="brand-subtitle">Aguardando o primeiro dispositivo ADB e a sessão interna do agente.</div>
+            </div>
+        </div>
+        <div class="status-strip">
+            <div class="status-chip">
+                <span class="material-symbols-outlined">usb</span>
+                <span id="device-chip-text">Sem dispositivo</span>
+            </div>
+            <div class="status-chip">
+                <span class="material-symbols-outlined">lan</span>
+                <span id="session-chip-text">Sessão inativa</span>
+            </div>
+        </div>
+    </header>
 
-<!-- Consent Modal - First Time Only -->
-<div id="consent-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-    <div class="bg-surface-container-low rounded-2xl border border-outline-variant/20 w-full max-w-lg shadow-2xl">
-        <div class="p-6 border-b border-outline-variant/20">
-            <div class="flex items-center gap-3">
-                <span class="material-symbols-outlined text-secondary text-3xl">security</span>
-                <div>
-                    <h2 class="text-xl font-bold text-white">Termos de Consentimento</h2>
-                    <p class="text-xs text-on-surface-variant">AION Repair OS - Session Safety</p>
+    <main class="workspace">
+        <section class="panel">
+            <div class="panel-head">
+                <div class="panel-kicker">Telemetria</div>
+                <div class="panel-note">Leitura contínua do aparelho conectado</div>
+            </div>
+            <div id="sensor-stream" class="sensor-stream scrollbar"></div>
+            <div class="left-footer">
+                <div class="line">
+                    <span class="material-symbols-outlined">security</span>
+                    <span>Execução interna pelo agente, com logs visíveis em tempo real.</span>
+                </div>
+                <div class="line">
+                    <span class="material-symbols-outlined">keyboard_return</span>
+                    <span>Digite no prompt e pressione Enter para conversar com a IA.</span>
                 </div>
             </div>
-        </div>
-        <div class="p-6 space-y-4">
-            <p class="text-sm text-on-surface">Para iniciar uma sessão de diagnóstico, você deve aceitar os seguintes termos:</p>
-            
-            <div class="space-y-3">
-                <label class="flex items-start gap-3 cursor-pointer p-3 bg-surface-container-high rounded-lg hover:bg-surface-container-highest transition-colors">
-                    <input type="checkbox" id="consent-usb" class="mt-1 accent-secondary">
-                    <div>
-                        <span class="text-sm font-medium">USB Debugging Habilitado</span>
-                        <p class="text-xs text-on-surface-variant mt-1">Confirmei que o USB Debugging está ativado nas Opções do Desenvolvedor do dispositivo.</p>
-                    </div>
-                </label>
-                
-                <label class="flex items-start gap-3 cursor-pointer p-3 bg-surface-container-high rounded-lg hover:bg-surface-container-highest transition-colors">
-                    <input type="checkbox" id="consent-rsa" class="mt-1 accent-secondary">
-                    <div>
-                        <span class="text-sm font-medium">Chave RSA Autorizada</span>
-                        <p class="text-xs text-on-surface-variant mt-1">Autorizei o computador a depurar o dispositivo quando solicitado.</p>
-                    </div>
-                </label>
-                
-                <label class="flex items-start gap-3 cursor-pointer p-3 bg-surface-container-high rounded-lg hover:bg-surface-container-highest transition-colors">
-                    <input type="checkbox" id="consent-scope" class="mt-1 accent-secondary">
-                    <div>
-                        <span class="text-sm font-medium">Escopo de Reparos Aceito</span>
-                        <p class="text-xs text-on-surface-variant mt-1">Entendo que o AION pode executar ações de diagnóstico e reparo no meu dispositivo.</p>
-                    </div>
-                </label>
-            </div>
-            
-            <div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/10">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="material-symbols-outlined text-warning text-sm">info</span>
-                    <span class="text-xs font-bold text-warning">Aviso de Segurança</span>
-                </div>
-                <p class="text-[10px] text-on-surface-variant">Todas as ações são registradas em log para auditoria. AION nunca executará ações destrutivas sem sua confirmação explícita.</p>
-            </div>
-        </div>
-        <div class="p-6 border-t border-outline-variant/20">
-            <button onclick="acceptConsent()" class="w-full bg-gradient-to-br from-secondary to-secondary-container text-background py-3 rounded-xl font-bold uppercase tracking-wider">
-                Aceitar e Iniciar Sessão
-            </button>
-        </div>
-    </div>
-</div>
+        </section>
 
-<!-- TopAppBar -->
-<header class="flex-none bg-surface-container-lowest/80 border-b border-outline-variant p-3 flex justify-between items-center z-50">
-    <div class="flex items-center gap-4">
-        <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-secondary text-2xl">psychology</span>
-            <h1 class="text-lg font-black text-primary italic tracking-tighter">AION REPAIR OS</h1>
-        </div>
-        <span class="text-[10px] font-mono text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded">V7.0 AGENTIC</span>
-    </div>
-    <div class="flex items-center gap-3">
-        <div id="session-indicator" class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-error"></span>
-            <span class="text-xs font-mono text-on-surface-variant">SEM SESSÃO</span>
-        </div>
-        <button onclick="toggleSessionModal()" class="bg-secondary/20 hover:bg-secondary/30 px-4 py-1.5 rounded-lg text-xs font-bold text-secondary flex items-center gap-2 transition-colors">
-            <span class="material-symbols-outlined text-sm">add_circle</span>
-            Nova Sessão
-        </button>
-    </div>
-</header>
+        <section class="panel chat-panel">
+            <div class="panel-head">
+                <div class="panel-kicker">Prompt</div>
+                <div class="panel-note">A única entrada do usuário é texto</div>
+            </div>
+            <div id="chat-stream" class="chat-stream scrollbar" aria-live="polite"></div>
+            <form id="chat-form" class="composer" autocomplete="off">
+                <span class="material-symbols-outlined">edit_note</span>
+                <input
+                    id="chat-input"
+                    type="text"
+                    placeholder="Converse com o agente, peça diagnóstico, confirmação ou orientação..."
+                    aria-label="Mensagem para o agente"
+                    spellcheck="false"
+                />
+            </form>
+            <div id="composer-hint" class="composer-hint">
+                Enter envia a mensagem. Se o agente pedir confirmação de risco, responda por texto com "confirmar" ou "cancelar".
+            </div>
+        </section>
 
-<!-- Main Content -->
-<main class="flex-grow flex overflow-hidden">
-    <!-- Left Sidebar - Session Info -->
-    <aside class="w-72 border-r border-outline-variant flex flex-col bg-surface-container-low">
-        <!-- Session Status Card -->
-        <div class="p-4 border-b border-outline-variant/20">
-            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Sessão Atual</h3>
-            <div id="session-card" class="bg-surface-container-lowest rounded-xl p-4 border border-outline-variant/10">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-mono text-error">INATIVA</span>
-                    <span class="material-symbols-outlined text-error text-lg">radio_button_unchecked</span>
-                </div>
-                <p class="text-sm text-on-surface-variant">Nenhum dispositivo conectado</p>
+        <section class="panel activity-panel">
+            <div class="panel-head">
+                <div class="panel-kicker">Dispositivo</div>
+                <div class="panel-note">Imagem, leituras e auditoria em tempo real</div>
             </div>
-        </div>
-        
-        <!-- Consent Status -->
-        <div class="p-4 border-b border-outline-variant/20">
-            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Consentimentos</h3>
-            <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs text-on-surface">USB Debug</span>
-                    <span id="consent-usb-status" class="material-symbols-outlined text-error text-sm">close</span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs text-on-surface">RSA Trusted</span>
-                    <span id="consent-rsa-status" class="material-symbols-outlined text-error text-sm">close</span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs text-on-surface">Escopo</span>
-                    <span id="consent-scope-status" class="material-symbols-outlined text-error text-sm">close</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Policy Engine -->
-        <div class="p-4 border-b border-outline-variant/20">
-            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Policy Engine</h3>
-            <div class="bg-surface-container-lowest rounded-xl p-3 border border-outline-variant/10">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs font-bold text-secondary">STATUS</span>
-                    <span class="text-xs font-mono text-secondary">ACTIVE</span>
-                </div>
-                <div class="space-y-1">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[10px] text-on-surface-variant">Allow List</span>
-                        <span class="text-[10px] font-mono text-secondary">ON</span>
+            <div class="device-showcase">
+                <div id="device-frame" class="device-frame fallback">
+                    <img id="device-image" alt="Imagem do modelo do aparelho" />
+                    <div class="device-overlay">
+                        <div class="device-stage-kicker">Modelo reconhecido</div>
+                        <div class="device-stage-title" id="device-stage-title">Aguardando dispositivo</div>
+                        <div class="device-stage-meta" id="device-stage-meta">Conecte o telefone para exibir o perfil completo.</div>
+                        <div class="device-stage-source" id="device-stage-source">Imagem local até o perfil ser resolvido.</div>
                     </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-[10px] text-on-surface-variant">Deny List</span>
-                        <span class="text-[10px] font-mono text-secondary">ON</span>
+                </div>
+                <div class="device-spec-grid">
+                    <div class="spec-card">
+                        <span class="label">Marca</span>
+                        <span class="value" id="spec-brand">--</span>
                     </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-[10px] text-on-surface-variant">Human Confirm</span>
-                        <span class="text-[10px] font-mono text-warning">HIGH-RISK</span>
+                    <div class="spec-card">
+                        <span class="label">Modelo</span>
+                        <span class="value" id="spec-model">--</span>
+                    </div>
+                    <div class="spec-card">
+                        <span class="label">Serial</span>
+                        <span class="value" id="spec-serial">--</span>
+                    </div>
+                    <div class="spec-card">
+                        <span class="label">RAM</span>
+                        <span class="value" id="spec-ram">--</span>
+                    </div>
+                    <div class="spec-card">
+                        <span class="label">ROM</span>
+                        <span class="value" id="spec-rom">--</span>
+                    </div>
+                    <div class="spec-card">
+                        <span class="label">Chipset</span>
+                        <span class="value" id="spec-chipset">--</span>
+                    </div>
+                    <div class="spec-card">
+                        <span class="label">Android</span>
+                        <span class="value" id="spec-android">--</span>
+                    </div>
+                    <div class="spec-card">
+                        <span class="label">Build</span>
+                        <span class="value" id="spec-build">--</span>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Device Info -->
-        <div class="p-4 flex-grow">
-            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Dispositivo</h3>
-            <div id="device-info" class="space-y-2 text-xs">
-                <div class="flex justify-between">
-                    <span class="text-on-surface-variant">Modelo</span>
-                    <span class="font-mono">--</span>
+            <div class="device-footer">
+                <div class="kv">
+                    <span>Board</span>
+                    <span id="device-board">--</span>
                 </div>
-                <div class="flex justify-between">
-                    <span class="text-on-surface-variant">Android</span>
-                    <span class="font-mono">--</span>
+                <div class="kv">
+                    <span>Product</span>
+                    <span id="device-product">--</span>
                 </div>
-                <div class="flex justify-between">
-                    <span class="text-on-surface-variant">Serial</span>
-                    <span class="font-mono text-[10px]">--</span>
+                <div class="kv">
+                    <span>API</span>
+                    <span id="device-sdk">--</span>
                 </div>
-            </div>
-        </div>
-    </aside>
-    
-    <!-- Center - Chat/Agent -->
-    <section class="flex-grow flex flex-col bg-surface-container-low">
-        <!-- Agent Header -->
-        <div class="p-4 border-b border-outline-variant/20 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
-                    <span class="material-symbols-outlined text-secondary">smart_toy</span>
-                </div>
-                <div>
-                    <h2 class="font-bold text-white">AION Agent</h2>
-                    <div class="flex items-center gap-2">
-                        <span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
-                        <span class="text-[10px] text-secondary font-mono">AGENTIC MODE</span>
-                    </div>
+                <div class="kv">
+                    <span>Imagem</span>
+                    <span id="device-image-source">--</span>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <span class="text-[10px] font-mono text-on-surface-variant">Mode:</span>
-                <select id="session-mode" class="bg-surface-container-high border-none rounded px-2 py-1 text-xs">
-                    <option value="diagnostic">Diagnóstico (Read-only)</option>
-                    <option value="repair">Reparo Assistido</option>
-                    <option value="forensic">Forense</option>
-                </select>
-            </div>
-        </div>
-        
-        <!-- Chat Messages -->
-        <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-4 custom-scrollbar">
-            <!-- Welcome Message -->
-            <div class="flex gap-3">
-                <div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center flex-shrink-0">
-                    <span class="material-symbols-outlined text-secondary text-sm">smart_toy</span>
-                </div>
-                <div class="bg-surface-container-high rounded-xl rounded-tl-none p-4 max-w-[80%]">
-                    <div class="text-[10px] font-mono text-secondary mb-1">AION // READY</div>
-                    <p class="text-sm text-on-surface">Olá! Sou o <strong>AION Agent</strong>, seu assistente de diagnóstico agentic. Conecte um dispositivo Android e autorize os consentimentos para iniciar.</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Chat Input -->
-        <div class="p-4 border-t border-outline-variant/20">
-            <div class="flex gap-3">
-                <input id="chat-input" type="text" class="flex-grow bg-surface-container-high border-none rounded-xl px-4 py-3 text-sm" placeholder="Descreva o problema ou pergunte sobre o dispositivo..." onkeypress="if(event.key==='Enter')sendMessage()">
-                <button onclick="sendMessage()" class="bg-gradient-to-br from-secondary to-secondary-container text-background px-6 py-3 rounded-xl font-bold flex items-center gap-2">
-                    <span class="material-symbols-outlined text-sm">send</span>
-                    Enviar
-                </button>
-            </div>
-        </div>
-    </section>
-    
-    <!-- Right Sidebar - Audit Timeline & Sensors -->
-    <aside class="w-80 border-l border-outline-variant flex flex-col bg-surface-container-low">
-        <!-- Telemetry -->
-        <div class="p-4 border-b border-outline-variant/20">
-            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Telemetria</h3>
-            <div class="grid grid-cols-2 gap-2">
-                <div class="bg-surface-container-lowest rounded-lg p-2 border border-outline-variant/10">
-                    <div class="text-[10px] text-on-surface-variant">CPU</div>
-                    <div id="telem-cpu" class="text-lg font-mono font-bold text-secondary">--</div>
-                </div>
-                <div class="bg-surface-container-lowest rounded-lg p-2 border border-outline-variant/10">
-                    <div class="text-[10px] text-on-surface-variant">RAM</div>
-                    <div id="telem-ram" class="text-lg font-mono font-bold text-secondary">--</div>
-                </div>
-                <div class="bg-surface-container-lowest rounded-lg p-2 border border-outline-variant/10">
-                    <div class="text-[10px] text-on-surface-variant">Temp</div>
-                    <div id="telem-temp" class="text-lg font-mono font-bold text-secondary">--</div>
-                </div>
-                <div class="bg-surface-container-lowest rounded-lg p-2 border border-outline-variant/10">
-                    <div class="text-[10px] text-on-surface-variant">Batt</div>
-                    <div id="telem-batt" class="text-lg font-mono font-bold text-secondary">--</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Audit Timeline -->
-        <div class="flex-grow flex flex-col p-4 overflow-hidden">
-            <h3 class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-3">Audit Timeline</h3>
-            <div id="audit-timeline" class="flex-grow overflow-y-auto custom-scrollbar space-y-3">
-                <div class="flex items-start gap-3">
-                    <div class="flex flex-col items-center">
-                        <div class="w-3 h-3 rounded-full bg-surface-container-high border-2 border-secondary"></div>
-                        <div class="w-0.5 h-full bg-outline-variant/20 mt-1"></div>
-                    </div>
-                    <div class="flex-grow pb-4">
-                        <div class="text-[10px] font-mono text-secondary">SYSTEM</div>
-                        <p class="text-xs text-on-surface mt-1">Aguardando início da sessão</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </aside>
-</main>
-
-<!-- Bottom Status Bar -->
-<footer class="flex-none p-2 border-t border-outline-variant bg-surface-container-lowest flex justify-between items-center text-[10px]">
-    <div class="flex items-center gap-4">
-        <span class="font-mono text-on-surface-variant">AION Agentic OS v7.0</span>
-        <span class="text-outline-variant">|</span>
-        <span id="footer-status" class="font-mono text-error">DISCONNECTED</span>
-    </div>
-    <div class="flex items-center gap-4">
-        <span class="font-mono text-on-surface-variant">Policy: <span class="text-secondary">ACTIVE</span></span>
-        <span class="text-outline-variant">|</span>
-        <span class="font-mono text-on-surface-variant">Session: <span id="footer-session" class="text-error">NONE</span></span>
-    </div>
-</footer>
-
-<!-- Session Modal -->
-<div id="session-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-surface-container-low rounded-2xl border border-outline-variant/20 w-full max-w-md shadow-2xl">
-        <div class="p-4 border-b border-outline-variant/20 flex items-center justify-between">
-            <h3 class="font-bold text-white">Selecionar Dispositivo</h3>
-            <button onclick="toggleSessionModal()" class="text-on-surface-variant hover:text-white">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        <div class="p-4 space-y-4">
-            <div>
-                <label class="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-2 block">Dispositivo</label>
-                <select id="device-select" class="w-full bg-surface-container-high border-none rounded-lg px-4 py-3 text-sm">
-                    <option value="">Procurando dispositivos...</option>
-                </select>
-            </div>
-            <button onclick="refreshDevices()" class="w-full bg-surface-container-high py-2 rounded-lg text-sm font-bold hover:bg-surface-container-highest transition-colors">
-                Atualizar Lista
-            </button>
-            
-            <div class="border-t border-outline-variant/20 pt-4">
-                <label class="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-2 block">Modo da Sessão</label>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 p-3 bg-surface-container-high rounded-lg cursor-pointer hover:bg-surface-container-highest">
-                        <input type="radio" name="mode" value="diagnostic" checked class="accent-secondary">
-                        <div>
-                            <span class="text-sm font-medium">Diagnóstico (Read-only)</span>
-                            <p class="text-[10px] text-on-surface-variant">Apenas leitura, sem ações de reparo</p>
-                        </div>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 bg-surface-container-high rounded-lg cursor-pointer hover:bg-surface-container-highest">
-                        <input type="radio" name="mode" value="repair" class="accent-secondary">
-                        <div>
-                            <span class="text-sm font-medium">Reparo Assistido</span>
-                            <p class="text-[10px] text-on-surface-variant">Execução de ações com confirmação</p>
-                        </div>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 bg-surface-container-high rounded-lg cursor-pointer hover:bg-surface-container-highest">
-                        <input type="radio" name="mode" value="forensic" class="accent-secondary">
-                        <div>
-                            <span class="text-sm font-medium">Forense</span>
-                            <p class="text-[10px] text-on-surface-variant">Captura completa com retenção de dados</p>
-                        </div>
-                    </label>
-                </div>
-            </div>
-        </div>
-        <div class="p-4 border-t border-outline-variant/20">
-            <button onclick="startSession()" class="w-full bg-gradient-to-br from-secondary to-secondary-container text-background py-3 rounded-xl font-bold uppercase">
-                Iniciar Sessão
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Risk Confirmation Modal -->
-<div id="risk-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-surface-container-low rounded-2xl border border-outline-variant/20 w-full max-w-md shadow-2xl">
-        <div class="p-4 border-b border-outline-variant/20">
-            <div class="flex items-center gap-3">
-                <span class="material-symbols-outlined text-warning text-2xl">warning</span>
-                <div>
-                    <h3 class="font-bold text-white">Confirmação de Ação</h3>
-                    <span id="risk-level-badge" class="text-[10px] font-mono px-2 py-0.5 rounded risk-medium">MEDIUM RISK</span>
-                </div>
-            </div>
-        </div>
-        <div class="p-4">
-            <p class="text-sm text-on-surface mb-4">A seguinte ação requer confirmação:</p>
-            <div id="risk-action-details" class="bg-surface-container-lowest rounded-lg p-3 font-mono text-xs mb-4">
-                <!-- Action details here -->
-            </div>
-            <div class="bg-surface-container-high rounded-lg p-3">
-                <p class="text-[10px] text-on-surface-variant">Esta ação será registrada no Audit Timeline para compliance.</p>
-            </div>
-        </div>
-        <div class="p-4 border-t border-outline-variant/20 flex gap-3">
-            <button onclick="cancelRiskAction()" class="flex-1 bg-surface-container-high py-3 rounded-xl font-bold hover:bg-surface-container-highest transition-colors">
-                Cancelar
-            </button>
-            <button onclick="confirmRiskAction()" class="flex-1 bg-warning text-background py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
-                Confirmar
-            </button>
-        </div>
-    </div>
+            <div id="activity-stream" class="activity-stream scrollbar"></div>
+        </section>
+    </main>
 </div>
 
 <script>
-// Global State
-const state = {
-    sessionId: null,
-    sessionActive: false,
-    deviceConnected: false,
-    consentGiven: false,
-    currentDevice: null,
-    auditLog: [],
-    pendingAction: null
-};
-
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    // Check if consent was already given
-    if (localStorage.getItem('aion_consent')) {
-        document.getElementById('consent-modal').classList.add('hidden');
-        state.consentGiven = true;
-    }
-    refreshDevices();
-    updateAuditTimeline('SYSTEM', 'Sistema inicializado. Aguardando consentimento.');
+const fmtTime = new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
 });
 
-function acceptConsent() {
-    const usb = document.getElementById('consent-usb').checked;
-    const rsa = document.getElementById('consent-rsa').checked;
-    const scope = document.getElementById('consent-scope').checked;
-    
-    if (!usb || !rsa || !scope) {
-        alert('Por favor, aceite todos os termos de consentimento.');
-        return;
-    }
-    
-    localStorage.setItem('aion_consent', JSON.stringify({
-        usb_debug: true,
-        rsa_trusted: true,
-        scope_accepted: true,
-        timestamp: new Date().toISOString()
-    }));
-    
-    state.consentGiven = true;
-    document.getElementById('consent-modal').classList.add('hidden');
-    
-    // Update consent status
-    document.getElementById('consent-usb-status').textContent = 'check';
-    document.getElementById('consent-usb-status').classList.remove('text-error');
-    document.getElementById('consent-usb-status').classList.add('text-secondary');
-    
-    document.getElementById('consent-rsa-status').textContent = 'check';
-    document.getElementById('consent-rsa-status').classList.remove('text-error');
-    document.getElementById('consent-rsa-status').classList.add('text-secondary');
-    
-    document.getElementById('consent-scope-status').textContent = 'check';
-    document.getElementById('consent-scope-status').classList.remove('text-error');
-    document.getElementById('consent-scope-status').classList.add('text-secondary');
-    
-    addToChat('AION', 'Consentimento aceito. Você está pronto para iniciar uma sessão de diagnóstico.', 'secondary');
-    updateAuditTimeline('CONSENT', 'Consentimento do usuário registrado');
+const sensorDefinitions = [
+    { key: 'cpu', label: 'CPU', desc: 'Carga do processador', icon: 'memory', unit: '%', getValue: s => s.cpu, getTone: v => tonePercent(v, 80, 92) },
+    { key: 'ram', label: 'RAM', desc: 'Uso de memória', icon: 'device_hub', unit: '%', getValue: s => s.ram, getTone: v => tonePercent(v, 85, 94) },
+    { key: 'temperature', label: 'Temperature', desc: 'Temperatura do SoC', icon: 'device_thermostat', unit: '°C', getValue: s => s.temperature, getTone: v => toneTemp(v) },
+    { key: 'battery', label: 'Battery', desc: 'Nível e estado de carga', icon: 'battery_full', unit: '%', getValue: s => `${s.battery.level}% ${s.battery.charging ? 'carregando' : 'descargando'}`, getTone: s => toneBattery(s.battery.level, s.battery.charging), getBar: s => s.battery.level },
+    { key: 'disk', label: 'Disk', desc: 'Armazenamento disponível', icon: 'hard_drive', unit: '%', getValue: s => s.disk + '%', getTone: v => tonePercent(v, 75, 90) },
+    { key: 'signal', label: 'Signal', desc: 'Intensidade do sinal celular', icon: 'network_cell', unit: 'dBm', getValue: s => s.signal + ' dBm', getTone: v => toneSignal(v) },
+    { key: 'latency', label: 'Latency', desc: 'Latência do scheduler', icon: 'timer', unit: 'ms', getValue: s => s.latency + ' ms', getTone: v => toneLatency(v) },
+    { key: 'gpu', label: 'GPU', desc: 'Carga gráfica', icon: 'animation', unit: '%', getValue: s => s.gpu + '%', getTone: v => tonePercent(v, 75, 90) },
+    { key: 'bluetooth', label: 'Bluetooth', desc: 'Estado do rádio Bluetooth', icon: 'bluetooth', unit: '', getValue: s => s.bluetooth ? 'Ativo' : 'Inativo', getTone: s => s.bluetooth ? 'good' : 'neutral', getBar: s => s.bluetooth ? 100 : 0 },
+    { key: 'wifi', label: 'Wi-Fi', desc: 'Estado da conexão Wi-Fi', icon: 'wifi', unit: '', getValue: s => s.wifi ? 'Conectado' : 'Desconectado', getTone: s => s.wifi ? 'good' : 'warn', getBar: s => s.wifi ? 100 : 0 },
+    { key: 'camera', label: 'Camera', desc: 'Disponibilidade da câmera', icon: 'photo_camera', unit: '', getValue: s => s.camera ? 'Disponível' : 'Indisponível', getTone: s => s.camera ? 'good' : 'warn', getBar: s => s.camera ? 100 : 0 },
+    { key: 'memory', label: 'Memory', desc: 'Uso da memória do sistema', icon: 'stack', unit: '%', getValue: s => s.memory + '%', getTone: v => tonePercent(v, 85, 95) },
+];
+
+const state = {
+    ws: null,
+    devicePollTimer: null,
+    auditPollTimer: null,
+    bootstrapLock: false,
+    currentDevice: null,
+    deviceInfo: null,
+    sessionId: null,
+    sessionMode: 'repair',
+    sessionActive: false,
+    pendingAction: null,
+    telemetry: {
+        cpu: 0,
+        ram: 0,
+        gpu: 0,
+        temperature: 0,
+        battery: { level: 0, charging: false },
+        disk: 0,
+        signal: -1,
+        latency: 0,
+        bluetooth: false,
+        wifi: false,
+        camera: false,
+        memory: 0
+    },
+    auditSeen: new Set()
+};
+
+const sensorNodes = new Map();
+const auditLimit = 80;
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderSensorSkeleton();
+    wireDeviceFrame();
+    appendActivity('SYSTEM', 'Sistema iniciado', 'Aguardando dispositivo ADB ou sessão ativa.');
+    appendChat('SYSTEM', 'O agente está pronto. Conecte o telefone ou envie uma mensagem.', 'system');
+    connectWebSocket();
+    refreshDevices();
+    refreshAudit();
+    state.devicePollTimer = setInterval(refreshDevices, 3000);
+    state.auditPollTimer = setInterval(refreshAudit, 4000);
+    document.getElementById('chat-form').addEventListener('submit', handleChatSubmit);
+    document.getElementById('chat-input').focus();
+});
+
+function wireDeviceFrame() {
+    const image = document.getElementById('device-image');
+    const frame = document.getElementById('device-frame');
+
+    image.addEventListener('load', () => {
+        image.classList.add('is-loaded');
+        frame.classList.toggle('fallback', image.dataset.source !== 'exact');
+    });
+
+    image.addEventListener('error', () => {
+        const fallback = image.dataset.fallback;
+        if (!fallback || image.dataset.source === 'fallback' || image.src === fallback) {
+            return;
+        }
+
+        image.dataset.source = 'fallback';
+        frame.classList.add('fallback');
+        document.getElementById('device-stage-source').textContent = 'Visual local de fallback.';
+        image.src = fallback;
+    });
 }
 
-function toggleSessionModal() {
-    const modal = document.getElementById('session-modal');
-    modal.classList.toggle('hidden');
-    if (!modal.classList.contains('hidden')) {
-        refreshDevices();
+function renderSensorSkeleton() {
+    const stream = document.getElementById('sensor-stream');
+    stream.innerHTML = sensorDefinitions.map((sensor) => `
+        <div class="sensor-row" id="sensor-${sensor.key}" data-tone="neutral">
+            <span class="material-symbols-outlined sensor-icon">${sensor.icon}</span>
+            <div class="sensor-copy">
+                <div class="sensor-label">${sensor.label}</div>
+                <div class="sensor-desc">${sensor.desc}</div>
+            </div>
+            <div class="sensor-value" id="sensor-${sensor.key}-value">--</div>
+            <div class="sensor-bar"><span id="sensor-${sensor.key}-bar"></span></div>
+        </div>
+    `).join('');
+
+    for (const sensor of sensorDefinitions) {
+        sensorNodes.set(sensor.key, {
+            row: document.getElementById(`sensor-${sensor.key}`),
+            value: document.getElementById(`sensor-${sensor.key}-value`),
+            bar: document.getElementById(`sensor-${sensor.key}-bar`)
+        });
+    }
+}
+
+function connectWebSocket() {
+    if (state.ws && (state.ws.readyState === WebSocket.OPEN || state.ws.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
+
+    const scheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    state.ws = new WebSocket(`${scheme}//${location.host}`);
+
+    state.ws.addEventListener('open', () => {
+        appendActivity('SYSTEM', 'WebSocket conectado', 'Fluxo de telemetria e eventos em tempo real habilitado.');
+    });
+
+    state.ws.addEventListener('message', (event) => {
+        try {
+            handleSocketMessage(JSON.parse(event.data));
+        } catch {
+            appendActivity('SYSTEM', 'Mensagem inválida do WebSocket', String(event.data));
+        }
+    });
+
+    state.ws.addEventListener('close', () => {
+        appendActivity('SYSTEM', 'WebSocket desconectado', 'Tentando reconectar.');
+        setTimeout(connectWebSocket, 1500);
+    });
+
+    state.ws.addEventListener('error', () => {
+        appendActivity('SYSTEM', 'WebSocket com erro', 'A interface continuará com polling HTTP.');
+    });
+}
+
+function handleSocketMessage(message) {
+    switch (message.type) {
+        case 'connected':
+            appendActivity('SYSTEM', 'Backend conectado', `Modo: ${message.mode} · Versão: ${message.version}`);
+            break;
+        case 'telemetry':
+            updateTelemetry(message.data);
+            break;
+        case 'device_connected':
+            applyDeviceInfo(message.device);
+            appendActivity('SESSION', 'Dispositivo conectado', describeDevice(message.device));
+            break;
+        case 'adb_log':
+            appendActivity('COMMAND', `Comando executado · ${message.risk || 'LOW'}`, `> ${message.command}\n${message.result || ''}`);
+            break;
+        case 'action_executed':
+            appendActivity('COMMAND', `Ação aceita · ${message.riskLevel || 'LOW'}`, JSON.stringify(message.result, null, 2));
+            break;
+        case 'chat_response':
+            // Chat replies are handled by the REST flow to keep the stream ordered.
+            break;
+        case 'error':
+            appendActivity('WARNING', 'Backend reportou erro', message.message || 'Erro desconhecido');
+            break;
     }
 }
 
 async function refreshDevices() {
-    const select = document.getElementById('device-select');
-    select.innerHTML = '<option value="">Procurando...</option>';
-    
-    try {
-        const res = await fetch('/api/devices');
-        const devices = await res.json();
-        
-        if (devices.length === 0) {
-            select.innerHTML = '<option value="">Nenhum dispositivo encontrado</option>';
-            return;
-        }
-        
-        select.innerHTML = devices.map(d => 
-            `<option value="${d.id}">${d.id}</option>`
-        ).join('');
-    } catch (err) {
-        select.innerHTML = '<option value="">Erro ao buscar dispositivos</option>';
-    }
-}
+    const devices = await fetchJson('/api/devices', []);
+    updateDeviceChip(devices);
 
-async function startSession() {
-    const deviceId = document.getElementById('device-select').value;
-    if (!deviceId) {
-        alert('Selecione um dispositivo');
+    if (!devices.length) {
+        if (state.currentDevice || state.sessionActive || state.deviceInfo) {
+            state.currentDevice = null;
+            state.deviceInfo = null;
+            state.sessionId = null;
+            state.sessionActive = false;
+            setSessionChip('Sessão inativa');
+            updateDeviceOverview(null);
+        }
+        setBrandSubtitle('Aguardando um telefone USB autorizado no ADB.');
         return;
     }
-    
-    const mode = document.querySelector('input[name="mode"]:checked').value;
-    
+
+    const device = devices[0];
+    if (state.bootstrapLock) return;
+
+    if (state.currentDevice === device.id && state.sessionActive) {
+        setBrandSubtitle(`Dispositivo ativo: ${state.deviceInfo?.displayName || device.id}`);
+        return;
+    }
+
+    state.bootstrapLock = true;
     try {
-        const res = await fetch('/api/sessions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                channel: 'web',
-                device_station_id: 'local',
-                mode: mode,
-                consent: {
-                    usb_debug_enabled: true,
-                    rsa_trusted: true,
-                    scope_accepted: true
-                }
-            })
-        });
-        
-        const data = await res.json();
-        
-        if (data.sessionId) {
-            state.sessionId = data.sessionId;
-            state.sessionActive = true;
-            state.currentDevice = deviceId;
-            
-            toggleSessionModal();
-            updateSessionUI(data);
-            addToChat('AION', `Sessão iniciada! Modo: ${mode}. Device ID: ${deviceId}`, 'secondary');
-            updateAuditTimeline('SESSION', `Sessão iniciada: ${data.sessionId}`);
-        }
+        await connectDevice(device.id);
+        await createSession(device.id);
+        setBrandSubtitle(`Dispositivo ativo: ${state.deviceInfo?.displayName || device.id}`);
     } catch (err) {
-        // Fallback - create session locally
-        state.sessionId = 'session_' + Date.now();
-        state.sessionActive = true;
-        state.currentDevice = deviceId;
-        
-        toggleSessionModal();
-        updateSessionUI({ mode: mode, device: deviceId });
-        addToChat('AION', `Sessão iniciada! Modo: ${mode}`, 'secondary');
-        updateAuditTimeline('SESSION', `Sessão iniciada localmente`);
+        appendActivity('WARNING', 'Bootstrap falhou', err.message);
+        setBrandSubtitle('Dispositivo detectado, mas a conexão ainda não foi concluída.');
+    } finally {
+        state.bootstrapLock = false;
     }
 }
 
-function updateSessionUI(data) {
-    // Update session indicator
-    const indicator = document.getElementById('session-indicator');
-    indicator.innerHTML = `
-        <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-        <span class="text-xs font-mono text-secondary">ATIVA</span>
-    `;
-    
-    // Update session card
-    const card = document.getElementById('session-card');
-    card.innerHTML = `
-        <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-mono text-secondary">ATIVA</span>
-            <span class="material-symbols-outlined text-secondary text-lg">check_circle</span>
-        </div>
-        <p class="text-sm text-on-surface font-bold">${data.device || state.currentDevice}</p>
-        <p class="text-xs text-on-surface-variant mt-1">Modo: ${data.mode}</p>
-    `;
-    
-    // Update footer
-    document.getElementById('footer-status').textContent = 'CONNECTED';
-    document.getElementById('footer-status').classList.remove('text-error');
-    document.getElementById('footer-status').classList.add('text-secondary');
-    
-    document.getElementById('footer-session').textContent = state.sessionId.substring(0, 8) + '...';
-    document.getElementById('footer-session').classList.remove('text-error');
-    document.getElementById('footer-session').classList.add('text-secondary');
+async function connectDevice(deviceId) {
+    const response = await fetch('/api/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.error || 'Falha ao conectar ao dispositivo');
+    }
+
+    applyDeviceInfo(data.device);
+    appendActivity('SESSION', 'ADB conectado', describeDevice(data.device));
 }
 
-function sendMessage() {
+async function createSession(deviceId) {
+    const response = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            channel: 'web',
+            device_station_id: deviceId,
+            mode: 'repair',
+            consent: {
+                usb_debug_enabled: true,
+                rsa_trusted: true,
+                scope_accepted: true
+            }
+        })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.error || 'Falha ao criar sessão');
+    }
+
+    state.sessionId = data.sessionId;
+    state.sessionMode = data.mode || 'repair';
+    state.sessionActive = true;
+    state.currentDevice = deviceId;
+    appendActivity('SESSION', 'Sessão aberta', `${state.sessionMode.toUpperCase()} · ${data.sessionId}`);
+    appendChat('AION', `Sessão interna iniciada em modo ${state.sessionMode.toUpperCase()} para ${data.device_info?.displayName || data.device_info?.model || deviceId}.`, 'agent');
+    updateSessionChip();
+}
+
+async function refreshAudit() {
+    const logs = await fetchJson('/api/audit?limit=' + auditLimit, []);
+    for (const log of logs) {
+        if (state.auditSeen.has(log.id)) continue;
+        state.auditSeen.add(log.id);
+        appendActivity(
+            'AUDIT',
+            `${log.action_type} · ${log.risk_level}`,
+            `${log.session_id || 'no-session'}\n${JSON.stringify(log.payload || {}, null, 2)}`
+        );
+    }
+}
+
+async function handleChatSubmit(event) {
+    event.preventDefault();
+
     const input = document.getElementById('chat-input');
     const message = input.value.trim();
     if (!message) return;
-    
+
     input.value = '';
-    addToChat('USER', message, 'primary');
-    
-    // Send to AI
-    fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            message: message,
-            sessionId: state.sessionId,
-            context: {
-                mode: document.getElementById('session-mode').value,
-                device: state.currentDevice
-            }
-        })
-    })
-    .then(r => r.json())
-    .then(data => {
-        addToChat('AION', data.response, 'secondary');
-        updateAuditTimeline('CHAT', `Mensagem enviada: ${message.substring(0, 50)}...`);
-        
-        // If there are actions to execute
-        if (data.actions) {
-            data.actions.forEach(action => {
-                executeAction(action);
-            });
-        }
-    })
-    .catch(err => {
-        addToChat('AION', 'Erro de comunicação. Tente novamente.', 'error');
-    });
-}
+    appendChat('YOU', message, 'user');
 
-function addToChat(sender, message, type) {
-    const container = document.getElementById('chat-messages');
-    const colorClass = type === 'primary' ? 'bg-primary-container text-on-primary-container' : 
-                       type === 'secondary' ? 'bg-surface-container-high text-on-surface' :
-                       'bg-error-container text-error';
-    const bgClass = type === 'primary' ? 'rounded-tr-none ml-auto' : 'rounded-tl-none';
-    
-    const html = `
-        <div class="flex gap-3 ${type === 'primary' ? 'flex-row-reverse' : ''}">
-            ${type !== 'primary' ? `
-                <div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center flex-shrink-0">
-                    <span class="material-symbols-outlined text-secondary text-sm">smart_toy</span>
-                </div>
-            ` : ''}
-            <div class="${colorClass} rounded-xl ${bgClass} p-4 max-w-[80%]">
-                <div class="text-[10px] font-mono ${type === 'secondary' ? 'text-secondary' : 'text-on-surface-variant'} mb-1">
-                    ${sender} // ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                </div>
-                <p class="text-sm whitespace-pre-wrap">${escapeHtml(message)}</p>
-            </div>
-        </div>
-    `;
-    
-    container.innerHTML += html;
-    container.scrollTop = container.scrollHeight;
-}
-
-function executeAction(action) {
-    const riskLevel = getRiskLevel(action);
-    
-    if (riskLevel === 'HIGH') {
-        showRiskModal(action);
-    } else {
-        performAction(action);
-    }
-}
-
-function getRiskLevel(action) {
-    // Define risk levels for different actions
-    const highRisk = ['rm -rf', 'dd', 'mkfs', 'reboot', 'shutdown', 'factory'];
-    const mediumRisk = ['pm clear', 'pm disable', 'am force-stop', 'setprop'];
-    const lowRisk = ['dumpsys', 'getprop', 'cat /proc/', 'ps', 'top', 'df'];
-    
-    const cmd = action.command || action;
-    
-    if (highRisk.some(r => cmd.includes(r))) return 'HIGH';
-    if (mediumRisk.some(r => cmd.includes(r))) return 'MEDIUM';
-    return 'LOW';
-}
-
-function showRiskModal(action) {
-    state.pendingAction = action;
-    
-    const level = getRiskLevel(action);
-    const badge = document.getElementById('risk-level-badge');
-    badge.textContent = level + ' RISK';
-    badge.className = `text-[10px] font-mono px-2 py-0.5 rounded risk-${level.toLowerCase()}`;
-    
-    document.getElementById('risk-action-details').innerHTML = `
-        <div class="text-on-surface-variant">Comando:</div>
-        <div class="text-secondary">${action.command || action}</div>
-        ${action.reason ? `<div class="text-on-surface-variant mt-2">Razão:</div><div class="text-on-surface">${action.reason}</div>` : ''}
-    `;
-    
-    document.getElementById('risk-modal').classList.remove('hidden');
-}
-
-function cancelRiskAction() {
-    state.pendingAction = null;
-    document.getElementById('risk-modal').classList.add('hidden');
-    addToChat('AION', 'Ação cancelada pelo usuário.', 'error');
-}
-
-function confirmRiskAction() {
-    document.getElementById('risk-modal').classList.add('hidden');
     if (state.pendingAction) {
-        performAction(state.pendingAction);
-        state.pendingAction = null;
+        const normalized = message.toLowerCase();
+        if (isConfirmationMessage(normalized)) {
+            appendActivity('COMMAND', 'Confirmação textual recebida', `> ${message}`);
+            await confirmPendingAction();
+            return;
+        }
+        if (isCancellationMessage(normalized)) {
+            cancelPendingAction(message);
+            return;
+        }
     }
-}
 
-async function performAction(action) {
-    const cmd = action.command || action;
-    
-    updateAuditTimeline('ACTION', `Executando: ${cmd}`);
-    addToChat('AION', `Executando: ${cmd}`, 'secondary');
-    
     try {
-        const res = await fetch('/api/execute', {
+        const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                command: cmd,
+            body: JSON.stringify({
+                message,
+                sessionId: state.sessionId,
+                context: {
+                    mode: state.sessionMode,
+                    device: state.currentDevice
+                }
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Falha ao conversar com a IA');
+        }
+
+        appendChat('AION', data.response || '(sem resposta)', 'agent');
+        appendActivity('SYSTEM', 'Resposta da IA', `Modelo: ${data.model || 'n/d'}`);
+
+        if (Array.isArray(data.actions) && data.actions.length) {
+            for (const action of data.actions) {
+                await executeAction(action);
+            }
+        }
+    } catch (err) {
+        appendChat('AION', 'Erro de comunicação com o backend.', 'system');
+        appendActivity('WARNING', 'Falha no chat', err.message);
+    }
+}
+
+async function executeAction(action) {
+    const command = normalizeAction(action);
+    const risk = getRiskLevel(command);
+
+    if (risk === 'HIGH') {
+        state.pendingAction = command;
+        setComposerHint(`Ação de alto risco pendente: digite "confirmar" para executar ${command}.`);
+        appendActivity('WARNING', 'Ação de alto risco aguardando confirmação', command);
+        appendChat('AION', `Detectei uma ação de alto risco: \`${command}\`\nDigite "confirmar" ou "cancelar" para continuar.`, 'system');
+        return;
+    }
+
+    await performAction(command, risk);
+}
+
+async function confirmPendingAction() {
+    if (!state.pendingAction) return;
+
+    const command = state.pendingAction;
+    state.pendingAction = null;
+    setComposerHint('Enter envia a mensagem. O agente continua controlando as ações e riscos internamente.');
+
+    if (state.sessionId) {
+        try {
+            await fetch(`/api/sessions/${state.sessionId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: 'forensic' })
+            });
+            state.sessionMode = 'forensic';
+            updateSessionChip();
+        } catch (err) {
+            appendActivity('WARNING', 'Falha ao escalar sessão', err.message);
+        }
+    }
+
+    await performAction(command, 'HIGH');
+}
+
+function cancelPendingAction(message) {
+    appendActivity('SYSTEM', 'Ação cancelada pelo usuário', message);
+    appendChat('AION', 'Ação pendente cancelada. Posso continuar com outro diagnóstico se você quiser.', 'system');
+    state.pendingAction = null;
+    setComposerHint('Enter envia a mensagem. O agente continua controlando as ações e riscos internamente.');
+}
+
+async function performAction(command, risk) {
+    appendActivity('COMMAND', `Executando · ${risk}`, `> ${command}`);
+
+    try {
+        const response = await fetch('/api/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                command,
                 sessionId: state.sessionId
             })
         });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-            updateAuditTimeline('ACTION', `Sucesso: ${cmd}`);
-            addToChat('AION', `Resultado:\n${data.result || 'Comando executado com sucesso.'}`, 'secondary');
-        } else {
-            updateAuditTimeline('ERROR', `Falha: ${cmd} - ${data.error}`);
-            addToChat('AION', `Erro: ${data.error}`, 'error');
+
+        const data = await response.json();
+        if (!response.ok) {
+            appendActivity('WARNING', `Execução bloqueada · ${risk}`, data.reason || data.error || 'Sem motivo informado');
+            appendChat('AION', `Comando bloqueado: ${data.reason || data.error || 'política do backend'}.`, 'system');
+            return;
         }
+
+        appendActivity('COMMAND', `Resultado · ${risk}`, data.result || '(sem saída)');
+        appendChat('AION', `Comando concluído: \`${command}\`\n\n${data.result || 'Sem saída textual.'}`, 'agent');
     } catch (err) {
-        updateAuditTimeline('ERROR', `Erro de conexão: ${cmd}`);
-        addToChat('AION', 'Erro de conexão com o servidor.', 'error');
+        appendActivity('WARNING', 'Falha na execução', err.message);
+        appendChat('AION', `Falha ao executar \`${command}\`: ${err.message}`, 'system');
     }
 }
 
-function updateAuditTimeline(type, message) {
-    const container = document.getElementById('audit-timeline');
-    const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-    const colorMap = {
-        'SYSTEM': 'border-secondary',
-        'SESSION': 'border-primary',
-        'CONSENT': 'border-secondary',
-        'CHAT': 'border-on-surface-variant',
-        'ACTION': 'border-secondary',
-        'ERROR': 'border-error'
+function appendChat(author, text, role) {
+    const stream = document.getElementById('chat-stream');
+    const bubble = document.createElement('article');
+    bubble.className = `bubble ${role}`;
+
+    const meta = document.createElement('div');
+    meta.className = 'bubble-meta';
+    const name = document.createElement('span');
+    name.textContent = author;
+    const time = document.createElement('span');
+    time.textContent = formatTime(new Date());
+    meta.append(name, time);
+
+    const body = document.createElement('div');
+    body.className = 'bubble-text';
+    body.textContent = text;
+
+    bubble.append(meta, body);
+    stream.appendChild(bubble);
+    stream.scrollTop = stream.scrollHeight;
+}
+
+function appendActivity(kind, title, body) {
+    const stream = document.getElementById('activity-stream');
+    const item = document.createElement('article');
+    item.className = `feed-item ${kind.toLowerCase()}`;
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const kindLabel = document.createElement('span');
+    kindLabel.textContent = kind;
+    const time = document.createElement('span');
+    time.textContent = formatTime(new Date());
+    meta.append(kindLabel, time);
+
+    const titleNode = document.createElement('div');
+    titleNode.className = 'title';
+    titleNode.textContent = title;
+
+    const bodyNode = document.createElement('div');
+    bodyNode.className = 'body';
+    bodyNode.textContent = body;
+
+    item.append(meta, titleNode, bodyNode);
+    stream.appendChild(item);
+    stream.scrollTop = stream.scrollHeight;
+}
+
+function updateTelemetry(sensorData) {
+    state.telemetry = sensorData;
+
+    for (const sensor of sensorDefinitions) {
+        const nodes = sensorNodes.get(sensor.key);
+        if (!nodes) continue;
+
+        const value = sensor.getValue(sensorData);
+        nodes.value.textContent = value;
+
+        const tone = typeof sensor.getTone === 'function' ? sensor.getTone(sensorData) : 'neutral';
+        nodes.row.dataset.tone = tone === 'neutral' ? 'neutral' : tone;
+
+        const rawBar = typeof sensor.getBar === 'function'
+            ? sensor.getBar(sensorData)
+            : typeof sensor.getValue(sensorData) === 'number'
+                ? sensor.getValue(sensorData)
+                : extractNumeric(sensorData, sensor.key);
+
+        const width = clamp(Number(rawBar) || 0, 0, 100);
+        nodes.bar.style.width = `${width}%`;
+    }
+
+    updateBrandTelemetry(sensorData);
+}
+
+function updateBrandTelemetry(sensorData) {
+    const temp = sensorData.temperature;
+    const tempNote = temp >= 50
+        ? `Temperatura alta: ${temp}°C`
+        : `Temperatura: ${temp}°C`;
+    const deviceNote = state.deviceInfo
+        ? `${state.deviceInfo.displayName || state.deviceInfo.model} · ${state.deviceInfo.chipset || 'chipset n/d'} · ${sensorData.battery.level}% bateria`
+        : 'Aguardando dispositivo ADB';
+    setBrandSubtitle(`${deviceNote} · ${tempNote}`);
+}
+
+function updateDeviceChip(devices) {
+    const chip = document.getElementById('device-chip-text');
+    if (!devices.length) {
+        chip.textContent = 'Sem dispositivo';
+        return;
+    }
+
+    const device = devices[0];
+    chip.textContent = `${device.id}`;
+}
+
+function updateSessionChip() {
+    if (!state.sessionActive) {
+        setSessionChip('Sessão inativa');
+        return;
+    }
+
+    setSessionChip(`${state.sessionMode.toUpperCase()} · ${shortId(state.sessionId)}`);
+}
+
+function setSessionChip(text) {
+    document.getElementById('session-chip-text').textContent = text;
+}
+
+function setBrandSubtitle(text) {
+    document.getElementById('brand-subtitle').textContent = text;
+}
+
+function setComposerHint(text) {
+    document.getElementById('composer-hint').textContent = text;
+}
+
+function updateDeviceOverview(device) {
+    const elements = {
+        stageTitle: document.getElementById('device-stage-title'),
+        stageMeta: document.getElementById('device-stage-meta'),
+        stageSource: document.getElementById('device-stage-source'),
+        image: document.getElementById('device-image'),
+        frame: document.getElementById('device-frame'),
+        brand: document.getElementById('spec-brand'),
+        model: document.getElementById('spec-model'),
+        serial: document.getElementById('spec-serial'),
+        ram: document.getElementById('spec-ram'),
+        rom: document.getElementById('spec-rom'),
+        chipset: document.getElementById('spec-chipset'),
+        android: document.getElementById('spec-android'),
+        build: document.getElementById('spec-build'),
+        board: document.getElementById('device-board'),
+        product: document.getElementById('device-product'),
+        sdk: document.getElementById('device-sdk'),
+        imageSource: document.getElementById('device-image-source')
     };
-    
-    const html = `
-        <div class="flex items-start gap-3">
-            <div class="flex flex-col items-center">
-                <div class="w-3 h-3 rounded-full bg-surface-container-high border-2 ${colorMap[type] || 'border-outline-variant'}"></div>
-                <div class="w-0.5 h-full bg-outline-variant/20 mt-1"></div>
-            </div>
-            <div class="flex-grow pb-4">
-                <div class="text-[10px] font-mono text-secondary">${type} // ${time}</div>
-                <p class="text-xs text-on-surface mt-1">${escapeHtml(message)}</p>
-            </div>
-        </div>
-    `;
-    
-    container.innerHTML += html;
-    container.scrollTop = container.scrollHeight;
-    
-    state.auditLog.push({ type, message, time });
+
+    if (!device) {
+        elements.stageTitle.textContent = 'Aguardando dispositivo';
+        elements.stageMeta.textContent = 'Conecte o telefone para exibir o perfil completo.';
+        elements.stageSource.textContent = 'Imagem local até o perfil ser resolvido.';
+        elements.brand.textContent = '--';
+        elements.model.textContent = '--';
+        elements.serial.textContent = '--';
+        elements.ram.textContent = '--';
+        elements.rom.textContent = '--';
+        elements.chipset.textContent = '--';
+        elements.android.textContent = '--';
+        elements.build.textContent = '--';
+        elements.board.textContent = '--';
+        elements.product.textContent = '--';
+        elements.sdk.textContent = '--';
+        elements.imageSource.textContent = '--';
+        elements.image.dataset.source = 'fallback';
+        elements.image.dataset.fallback = '';
+        elements.image.removeAttribute('src');
+        elements.image.classList.remove('is-loaded');
+        elements.frame.classList.add('fallback');
+        return;
+    }
+
+    const displayName = device.displayName || [device.brand, device.model].filter(Boolean).join(' ').trim() || device.model || device.brand || device.id || 'Unknown device';
+    const ramText = device.ramDisplay || formatMemoryGb(device.ramTotalMb);
+    const romText = device.storageDisplay || formatStorageGb(device.storageTotalGb, device.storageUsedPercent);
+    const metaParts = [
+        device.serial ? `Serial ${device.serial}` : '',
+        ramText !== '--' ? `RAM ${ramText}` : '',
+        romText !== '--' ? `ROM ${romText}` : '',
+        device.androidSdk ? `API ${device.androidSdk}` : ''
+    ].filter(Boolean);
+
+    elements.stageTitle.textContent = displayName;
+    elements.stageMeta.textContent = metaParts.join(' · ');
+    elements.stageSource.textContent = device.imageResolved
+        ? `Imagem exata: ${formatImageSource(device.imageSource)}`
+        : 'Visual local de fallback enquanto a foto exata carrega.';
+    elements.image.dataset.source = device.imageResolved ? 'exact' : 'fallback';
+    elements.image.dataset.fallback = device.fallbackImageUrl || device.imageUrl || '';
+    elements.image.alt = `Imagem do modelo ${displayName}`;
+    elements.image.classList.remove('is-loaded');
+    elements.image.src = device.imageUrl || device.fallbackImageUrl || '';
+    if (elements.image.complete && elements.image.naturalWidth > 0) {
+        elements.image.classList.add('is-loaded');
+    }
+    elements.frame.classList.toggle('fallback', !device.imageResolved);
+
+    elements.brand.textContent = device.brand || device.manufacturer || '--';
+    elements.model.textContent = device.model || '--';
+    elements.serial.textContent = device.serial || device.id || '--';
+    elements.ram.textContent = ramText;
+    elements.rom.textContent = romText;
+    elements.chipset.textContent = device.chipset || '--';
+    elements.android.textContent = device.android ? `Android ${device.android}` : '--';
+    elements.build.textContent = device.buildId || device.securityPatch || '--';
+    elements.board.textContent = device.board || '--';
+    elements.product.textContent = device.product || '--';
+    elements.sdk.textContent = device.androidSdk ? `API ${device.androidSdk}` : '--';
+    elements.imageSource.textContent = device.imageResolved ? formatImageSource(device.imageSource) : 'Fallback local';
 }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+function applyDeviceInfo(device) {
+    state.currentDevice = device.id;
+    state.deviceInfo = device;
+    updateDeviceOverview(device);
+    document.getElementById('device-chip-text').textContent = `${device.displayName || device.model || device.id}`;
 }
 
-// Poll for telemetry updates
-setInterval(async () => {
-    if (!state.sessionActive) return;
-    
+function describeDevice(device) {
+    if (!device) return 'Sem detalhes do dispositivo.';
+    const details = [
+        device.displayName || device.model || 'Unknown',
+        device.chipset ? `${device.chipset}` : '',
+        device.ramDisplay || formatMemoryGb(device.ramTotalMb),
+        device.storageDisplay || formatStorageGb(device.storageTotalGb, device.storageUsedPercent),
+        device.android ? `Android ${device.android}` : '',
+        device.id
+    ].filter(Boolean);
+    return details.join(' · ');
+}
+
+function formatMemoryGb(totalMb) {
+    if (!totalMb) return '--';
+    const gb = totalMb / 1024;
+    return `${gb >= 10 ? Math.round(gb) : gb.toFixed(1)} GB`;
+}
+
+function formatStorageGb(totalGb, usedPercent) {
+    if (!totalGb) return '--';
+    const freeGb = usedPercent >= 0 ? Number((totalGb * (1 - (usedPercent / 100))).toFixed(totalGb >= 10 ? 0 : 1)) : null;
+    return freeGb !== null ? `${totalGb} GB total · ${freeGb} GB livre` : `${totalGb} GB`;
+}
+
+function formatImageSource(source) {
+    switch (source) {
+        case 'wikimedia-commons':
+            return 'Wikimedia Commons';
+        case 'wikidata':
+            return 'Wikidata';
+        case 'gsmarena':
+            return 'GSMArena';
+        case 'local-fallback':
+            return 'Fallback local';
+        default:
+            return source || 'lookup';
+    }
+}
+
+function normalizeAction(action) {
+    if (!action) return '';
+    if (typeof action === 'string') return action.trim();
+    if (typeof action === 'object') {
+        if (action.command) return String(action.command).trim();
+        if (action.cmd) {
+            return `${action.cmd}${action.target ? ` ${action.target}` : ''}`.trim();
+        }
+    }
+    return String(action).trim();
+}
+
+function getRiskLevel(command) {
+    const highRisk = ['rm -rf', 'dd', 'mkfs', 'reboot', 'shutdown', 'factoryreset', 'wipe data', 'wipe_partition'];
+    const mediumRisk = ['pm clear', 'pm disable', 'am force-stop', 'setprop', 'svc wifi', 'screencap', 'screenrecord', 'logcat -c', 'logcat -d'];
+    const lowRisk = ['dumpsys', 'getprop', 'cat /proc/', 'ps ', 'df ', 'free', 'top ', 'pm list'];
+    const lower = command.toLowerCase();
+
+    if (highRisk.some(part => lower.includes(part))) return 'HIGH';
+    if (mediumRisk.some(part => lower.includes(part))) return 'MEDIUM';
+    if (lowRisk.some(part => lower.includes(part))) return 'LOW';
+    return 'LOW';
+}
+
+function isConfirmationMessage(text) {
+    return /^(confirmar|confirmo|vai|executar|sim|prosseguir|liberar)$/i.test(text.trim());
+}
+
+function isCancellationMessage(text) {
+    return /^(cancelar|cancela|nao|não|stop|parar|abort)$/i.test(text.trim());
+}
+
+function tonePercent(value, warnThreshold, dangerThreshold) {
+    if (value >= dangerThreshold) return 'danger';
+    if (value >= warnThreshold) return 'warn';
+    return value >= 0 ? 'good' : 'neutral';
+}
+
+function toneTemp(value) {
+    if (value >= 55) return 'danger';
+    if (value >= 45) return 'warn';
+    return 'good';
+}
+
+function toneBattery(level, charging) {
+    if (level < 20 && !charging) return 'danger';
+    if (level < 35 && !charging) return 'warn';
+    return 'good';
+}
+
+function toneSignal(dbm) {
+    if (dbm <= -100) return 'danger';
+    if (dbm <= -85) return 'warn';
+    return 'good';
+}
+
+function toneLatency(value) {
+    if (value >= 70) return 'danger';
+    if (value >= 40) return 'warn';
+    return 'good';
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function extractNumeric(sensorData, key) {
+    const value = sensorData?.[key];
+    if (typeof value === 'number') return value;
+    if (typeof value === 'boolean') return value ? 100 : 0;
+    if (value && typeof value === 'object') {
+        if (typeof value.level === 'number') return value.level;
+    }
+    return 0;
+}
+
+function shortId(value) {
+    if (!value) return '--';
+    const str = String(value);
+    return str.length > 10 ? `${str.slice(0, 8)}…` : str;
+}
+
+function formatTime(value) {
+    return fmtTime.format(value instanceof Date ? value : new Date(value));
+}
+
+async function fetchJson(url, fallback = null, options = {}) {
     try {
-        const res = await fetch('/api/sensors');
-        const data = await res.json();
-        
-        document.getElementById('telem-cpu').textContent = data.cpu + '%';
-        document.getElementById('telem-ram').textContent = data.ram + '%';
-        document.getElementById('telem-temp').textContent = data.temperature + '°';
-        document.getElementById('telem-batt').textContent = data.battery.level + '%';
-        
-        // Color coding
-        if (data.cpu > 80) document.getElementById('telem-cpu').classList.add('text-warning');
-        if (data.temperature > 45) document.getElementById('telem-temp').classList.add('text-error');
-    } catch {}
-}, 2000);
+        const response = await fetch(url, options);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || 'Request failed');
+        return data;
+    } catch (err) {
+        if (fallback !== null) return fallback;
+        throw err;
+    }
+}
 </script>
 </body>
 </html>

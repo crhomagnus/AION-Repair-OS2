@@ -4,7 +4,7 @@ class CmdValidator {
         this.lowRisk = [
             'help',
             'dumpsys battery', 'dumpsys meminfo', 'dumpsys cpuinfo',
-            'dumpsys wifi', 'dumpsys telephony.registry',
+            'dumpsys wifi', 'dumpsys telephony.registry', 'dumpsys telephony registry',
             'dumpsys bluetooth_manager', 'dumpsys media.camera',
             'dumpsys connectivity', 'dumpsys activity',
             'cat /proc/stat', 'cat /proc/meminfo', 'cat /proc/cpuinfo',

@@ -1047,6 +1047,13 @@ function handleSocketMessage(message) {
         case 'chat_response':
             // Chat replies are handled by the REST flow to keep the stream ordered.
             break;
+        case 'device_issue': {
+            const severityMap = { action_required: 'WARNING', error: 'WARNING', warning: 'WARNING', info: 'SYSTEM' };
+            const tag = severityMap[message.severity] || 'WARNING';
+            appendActivity(tag, `⚠ ${message.title}`, message.hint || '');
+            setBrandSubtitle(message.title);
+            break;
+        }
         case 'error':
             appendActivity('WARNING', 'Backend reportou erro', message.message || 'Erro desconhecido');
             break;

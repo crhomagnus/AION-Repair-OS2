@@ -26,6 +26,40 @@ It does two things:
 npm run bridge
 ```
 
+## Auto-Start with systemd
+
+To keep the bridge running automatically on boot:
+
+```bash
+sudo cp bridge/aion-bridge.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable aion-bridge
+sudo systemctl start aion-bridge
+```
+
+Check status:
+
+```bash
+sudo systemctl status aion-bridge
+journalctl -u aion-bridge -f
+```
+
+## Health Check
+
+The bridge runs a health check every 30 seconds (configurable via `BRIDGE_HEALTH_CHECK_INTERVAL`).
+
+It verifies:
+- Local ADB server is reachable (auto-restarts if not)
+- SSH tunnel process is alive
+- Periodic summary every 10 checks (uptime, reconnects, failures)
+
+## Reconnection
+
+If the SSH tunnel drops, the bridge reconnects with exponential backoff:
+- First retry: 5s
+- Subsequent retries: 10s, 20s, 40s... up to 60s max
+- Configurable via `BRIDGE_RECONNECT_DELAY` and `BRIDGE_MAX_RECONNECT_DELAY`
+
 ## Expected Result
 
 - Local workstation: `adb devices` shows the phone.

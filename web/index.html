@@ -1018,6 +1018,25 @@ function handleSocketMessage(message) {
         case 'device_connected':
             applyDeviceInfo(message.device);
             appendActivity('SESSION', 'Dispositivo conectado', describeDevice(message.device));
+            setBrandSubtitle(`Dispositivo ativo: ${message.device.displayName || message.device.model || message.device.id}`);
+            // Auto-create session if not active
+            if (!state.sessionActive && !state.bootstrapLock) {
+                state.bootstrapLock = true;
+                createSession(message.device.id)
+                    .catch(err => appendActivity('WARNING', 'Sessão automática falhou', err.message))
+                    .finally(() => { state.bootstrapLock = false; });
+            }
+            break;
+        case 'device_disconnected':
+            appendActivity('SESSION', 'Dispositivo desconectado', `ID: ${message.deviceId}`);
+            state.currentDevice = null;
+            state.deviceInfo = null;
+            state.sessionId = null;
+            state.sessionActive = false;
+            setSessionChip('Sessão inativa');
+            updateDeviceOverview(null);
+            updateDeviceChip([]);
+            setBrandSubtitle('Aguardando um telefone USB autorizado no ADB.');
             break;
         case 'adb_log':
             appendActivity('COMMAND', `Comando executado · ${message.risk || 'LOW'}`, `> ${message.command}\n${message.result || ''}`);
@@ -1056,6 +1075,28 @@ async function refreshDevices() {
 
     if (state.currentDevice === device.id && state.sessionActive) {
         setBrandSubtitle(`Dispositivo ativo: ${state.deviceInfo?.displayName || device.id}`);
+        return;
+    }
+
+    // Check if backend already auto-connected this device
+    const status = await fetchJson('/api/status', {});
+    if (status.device && status.device.id === device.id) {
+        // Backend already connected — just sync UI
+        if (state.currentDevice !== device.id) {
+            applyDeviceInfo(status.device);
+            appendActivity('SESSION', 'Dispositivo detectado', describeDevice(status.device));
+        }
+        if (!state.sessionActive) {
+            state.bootstrapLock = true;
+            try {
+                await createSession(device.id);
+                setBrandSubtitle(`Dispositivo ativo: ${status.device.displayName || device.id}`);
+            } catch (err) {
+                appendActivity('WARNING', 'Sessão falhou', err.message);
+            } finally {
+                state.bootstrapLock = false;
+            }
+        }
         return;
     }
 

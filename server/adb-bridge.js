@@ -17,6 +17,10 @@ class AdbBridge {
         } catch { return []; }
     }
 
+    _device() {
+        return this.client.getDevice(this.deviceId);
+    }
+
     async connect(deviceId) {
         const devices = await this.listDevices();
         if (!devices.some(device => device.id === deviceId)) {
@@ -30,8 +34,9 @@ class AdbBridge {
 
     async _getDeviceInfo() {
         try {
+            const device = this._device();
             const run = async (cmd) => {
-                const stream = await this.client.shell(this.deviceId, cmd);
+                const stream = await device.shell(cmd);
                 return new Promise((resolve, reject) => {
                     const chunks = [];
                     stream.on('data', c => chunks.push(c));
@@ -69,7 +74,7 @@ class AdbBridge {
 
     async execute(command) {
         if (!this.deviceId) throw new Error('No device connected');
-        const stream = await this.client.shell(this.deviceId, command);
+        const stream = await this._device().shell(command);
         return new Promise((resolve, reject) => {
             const chunks = [];
             stream.on('data', c => chunks.push(c));

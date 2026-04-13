@@ -1,7 +1,7 @@
 # AION Repair OS - Estado Completo do Projeto
 
-Data de geracao: 2026-04-13
-Versao: 7.0.3
+Data de geracao: 2026-04-11
+Versao: 7.0.2
 Gerado por: Claude Opus 4.6 (1M context)
 
 ---
@@ -102,9 +102,9 @@ AION Repair OS e um sistema web de diagnostico e reparo de smartphones Android. 
 
 | Provider | Variavel | Valor | Status |
 |----------|----------|-------|--------|
-| OpenRouter | `OPENROUTER_API_KEY` | `[REDACTED - ver .env na workstation e no VPS]` | Ativa, em uso no VPS |
-| OpenRouter | `OPENROUTER_MODEL` | `qwen/qwen3.6-plus` | Ativo |
-| DeepSeek | `DEEPSEEK_API_KEY` | Nao configurada no estado atual | Disponivel como alternativa no codigo |
+| DeepSeek | `DEEPSEEK_API_KEY` | `[REDACTED - ver .env na workstation e no VPS]` | Ativa, em uso no VPS |
+| DeepSeek | `DEEPSEEK_MODEL` | `deepseek-reasoner` (R1) | Ativo |
+| OpenRouter | `OPENROUTER_API_KEY` | Nao configurada | Disponivel como alternativa |
 
 ### 4.2 Chaves SSH
 
@@ -141,7 +141,7 @@ AION Repair OS e um sistema web de diagnostico e reparo de smartphones Android. 
 ```
 aion-repair-os/
   main.js                          # Bootstrap: carrega .env e inicia o server
-  package.json                     # Versao 7.0.3, 4 dependencias
+  package.json                     # Versao 7.0.2, 4 dependencias
   package-lock.json                # Lock das dependencias
   .env                             # Variaveis de ambiente (NAO commitado)
   .env.example                     # Template de variaveis
@@ -187,7 +187,6 @@ aion-repair-os/
     v7.0.0/README.md                   # Snapshot: AI/UI/telemetria
     v7.0.1/README.md                   # Snapshot: Docker, ADB remoto
     v7.0.2/README.md                   # Snapshot: SSH bridge
-    v7.0.3/README.md                   # Snapshot: continuidade + OpenRouter/Qwen
   
   CONTEXT.md                           # Doc de continuidade condensado
   PROJECT_MASTER.md                    # Doc de handoff exaustivo
@@ -472,12 +471,12 @@ journalctl -u aion-bridge -f          # Logs em tempo real
 
 | Variavel | Obrigatoria | Descricao | Valor atual |
 |----------|-------------|-----------|-------------|
-| `AI_PROVIDER` | Nao | `openrouter` ou `deepseek` | `openrouter` |
-| `DEEPSEEK_API_KEY` | Se DeepSeek | Chave API DeepSeek | Nao configurada no estado atual |
-| `DEEPSEEK_MODEL` | Nao | Modelo DeepSeek | Nao configurado no estado atual |
-| `DEEPSEEK_API_BASE_URL` | Nao | Base URL DeepSeek | Nao configurada no estado atual |
-| `OPENROUTER_API_KEY` | Se OpenRouter | Chave API OpenRouter | Configurada na `.env` local e no VPS |
-| `OPENROUTER_MODEL` | Nao | Modelo OpenRouter | `qwen/qwen3.6-plus` |
+| `AI_PROVIDER` | Nao | `openrouter` ou `deepseek` | (auto-detectado) |
+| `DEEPSEEK_API_KEY` | Se DeepSeek | Chave API DeepSeek | `[REDACTED - ver .env na workstation e no VPS]` |
+| `DEEPSEEK_MODEL` | Nao | Modelo DeepSeek | `deepseek-reasoner` |
+| `DEEPSEEK_API_BASE_URL` | Nao | Base URL DeepSeek | `https://api.deepseek.com` |
+| `OPENROUTER_API_KEY` | Se OpenRouter | Chave API OpenRouter | Nao configurada |
+| `OPENROUTER_MODEL` | Nao | Modelo OpenRouter | `openai/gpt-oss-120b:free` |
 | `OPENROUTER_API_BASE_URL` | Nao | Base URL OpenRouter | `https://openrouter.ai/api/v1` |
 | `OPENROUTER_REFERER` | Nao | Header referer | `http://localhost:3001` |
 | `OPENROUTER_APP_NAME` | Nao | Header X-Title | `AION Repair OS` |
@@ -618,11 +617,11 @@ journalctl -u aion-bridge -f          # Logs em tempo real
 - Push para GitHub (`origin/main`)
 - Clone fresh no VPS (`/opt/aion-repair-os/`)
 - Rebuild do container Docker
-- Verificacao: `healthy`, v7.0.3, AI online com OpenRouter/Qwen
+- Verificacao: `healthy`, v7.0.2, AI online com DeepSeek
 
 ---
 
-## 17. ESTADO ATUAL DO SISTEMA (2026-04-13)
+## 17. ESTADO ATUAL DO SISTEMA (2026-04-11)
 
 ### 17.1 GitHub
 
@@ -637,8 +636,8 @@ Status: sincronizado com origin
 ```
 Container: aion-repair-os (healthy)
 URL: http://31.97.83.152:3002
-Versao: 7.0.3
-AI: ONLINE (qwen/qwen3.6-plus)
+Versao: 7.0.2
+AI: ONLINE (deepseek-reasoner)
 Policy: ACTIVE
 Sessions: 0
 ADB: disconnected (bridge nao esta rodando)

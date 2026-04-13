@@ -1,8 +1,5 @@
 const https = require('https');
 
-const DEFAULT_DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-reasoner';
-const DEFAULT_OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'qwen/qwen3.6-plus';
-
 class AiAgent {
     constructor(adb, validator) {
         this.adb = adb;
@@ -12,8 +9,8 @@ class AiAgent {
             ? (process.env.DEEPSEEK_API_KEY || process.env.OPENROUTER_API_KEY || '')
             : (process.env.OPENROUTER_API_KEY || process.env.DEEPSEEK_API_KEY || '');
         this.model = this.provider === 'deepseek'
-            ? DEFAULT_DEEPSEEK_MODEL
-            : DEFAULT_OPENROUTER_MODEL;
+            ? (process.env.DEEPSEEK_MODEL || 'deepseek-reasoner')
+            : (process.env.OPENROUTER_MODEL || 'openai/gpt-oss-120b:free');
         this.apiBaseUrl = this.provider === 'deepseek'
             ? (process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com')
             : (process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1');
@@ -377,10 +374,10 @@ Wi-Fi: ${s.wifi ? 'Conectado' : 'Desconectado'} | Bluetooth: ${s.bluetooth ? 'At
         this.apiKey = key; 
         if (model) {
             this.model = model;
-        } else if (!this.model || this.model === DEFAULT_DEEPSEEK_MODEL || this.model === DEFAULT_OPENROUTER_MODEL) {
+        } else if (!this.model || this.model === 'deepseek-reasoner' || this.model === 'openai/gpt-oss-120b:free') {
             this.model = this.provider === 'deepseek'
-                ? DEFAULT_DEEPSEEK_MODEL
-                : DEFAULT_OPENROUTER_MODEL;
+                ? (process.env.DEEPSEEK_MODEL || 'deepseek-reasoner')
+                : (process.env.OPENROUTER_MODEL || 'openai/gpt-oss-120b:free');
         }
         this.apiBaseUrl = this.provider === 'deepseek'
             ? (process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com')

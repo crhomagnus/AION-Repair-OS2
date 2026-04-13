@@ -12,7 +12,6 @@ Current source of truth: [CONTEXT.md](/home/bluecamp/aion-repair-os/CONTEXT.md)
 - Documentation now includes a continuity doc and versioned update folders.
 - The Hostinger VPS deployment is live on Docker at `http://31.97.83.152:3002`.
 - The secure local bridge architecture is now implemented in `bridge/local-bridge.js` and is live end-to-end.
-- The current default AI provider is OpenRouter with `qwen/qwen3.6-plus`.
 
 ## Latest Work
 
@@ -23,7 +22,6 @@ Current source of truth: [CONTEXT.md](/home/bluecamp/aion-repair-os/CONTEXT.md)
 - Docker deployment support and remote ADB configuration were added.
 - SSH reverse tunnel bridge support was added.
 - The VPS now sees the USB phone through the local bridge.
-- Versioned continuity was refreshed to `7.0.3`.
 
 ## Open Work
 

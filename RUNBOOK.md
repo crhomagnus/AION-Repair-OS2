@@ -12,7 +12,7 @@ npm install
 
 # 3. Configure o ambiente
 cp .env.example .env
-# Edite .env com suas chaves de IA (o padrão atual é OpenRouter + qwen/qwen3.6-plus)
+# Edite .env com suas chaves de IA (OPENROUTER_API_KEY ou DEEPSEEK_API_KEY)
 
 # 4. Conecte um celular Android via USB
 adb devices -l   # deve mostrar o device
@@ -98,7 +98,7 @@ docker compose restart
 # Edite .env no VPS:
 AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=sk-or-v1-sua-chave
-OPENROUTER_MODEL=qwen/qwen3.6-plus
+OPENROUTER_MODEL=openai/gpt-oss-120b:free
 
 # Reinicie o container
 docker compose restart

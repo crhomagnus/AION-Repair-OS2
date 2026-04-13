@@ -1,7 +1,7 @@
 # AION Repair OS - Project Continuity Context
 
-Last updated: 2026-04-13
-Version: 7.0.3
+Last updated: 2026-04-11
+Version: 7.0.2
 
 ## Document Relationship
 
@@ -190,7 +190,7 @@ If another AI opens this repo, the fastest path is:
 
 1. Read this file.
 2. Read `updates/README.md`.
-3. Read `updates/v7.0.3/README.md`.
+3. Read `updates/v7.0.2/README.md`.
 4. Check `server/index.js` for the live API contract.
 5. Check `server/ai-agent.js` for the current prompt and vocabulary rules.
 6. Check `web/index.html` for the current UI flow.
@@ -201,7 +201,6 @@ If another AI opens this repo, the fastest path is:
 ## Current Snapshot
 
 - The assistant is configured as AION in Portuguese (Brazil).
-- The current AI provider is OpenRouter with `qwen/qwen3.6-plus`; DeepSeek remains supported as the alternate provider when configured.
 - The UI is dark, neon, and mostly read-only.
 - The assistant adapts to lay users or repair technicians.
 - Offline AI replies are disabled.
@@ -213,7 +212,7 @@ If another AI opens this repo, the fastest path is:
 
 ## Update Index
 
-- `updates/v7.0.3/README.md` contains the current implementation snapshot.
+- `updates/v7.0.2/README.md` contains the current implementation snapshot.
 - Future improvements should get their own versioned folder under `updates/`.
 
 ## Notes for Future Maintenance

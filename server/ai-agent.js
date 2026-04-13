@@ -56,7 +56,16 @@ Acoes disponiveis:
 - GET_DISK: uso de armazenamento
 - CAPTURE_SCREENSHOT: captura de tela (risco MEDIO, requer confirmacao)
 - SHELL_SAFE: comando shell customizado. Requer campo “command”. Ex: {“type”:”SHELL_SAFE”,”command”:”dumpsys activity”}
-- RUN_SKILL: executa diagnostico composto. Requer campo “skill”. Skills: FULL_DIAGNOSTIC, BATTERY_HEALTH, THERMAL_ANALYSIS, STORAGE_CLEANUP, NETWORK_DIAGNOSTIC, PERFORMANCE_PROFILE, APP_ANALYSIS, SECURITY_CHECK
+- RUN_SKILL: executa diagnostico composto. Requer campo “skill”.
+  Skills disponiveis:
+  Core: FULL_DIAGNOSTIC (8 cmds), BATTERY_HEALTH (4), THERMAL_ANALYSIS (6), STORAGE_CLEANUP (5)
+  Rede: NETWORK_DIAGNOSTIC (7), WIFI_ANALYSIS (4), CELLULAR_ANALYSIS (8), BLUETOOTH_ANALYSIS (2)
+  Performance: PERFORMANCE_PROFILE (8), PROCESS_ANALYSIS (4)
+  Apps: APP_ANALYSIS (5), APP_CRASH_LOG (4)
+  Hardware: HARDWARE_PROFILE (8), DEVICE_IDENTITY (9), DISPLAY_ANALYSIS (4), AUDIO_ANALYSIS (2)
+  Seguranca: SECURITY_CHECK (8)
+  Forense: LOG_COLLECTION (5), FORENSIC_SNAPSHOT (9)
+  Ex: {“type”:”RUN_SKILL”,”skill”:”CELLULAR_ANALYSIS”}
 </ferramentas>
 
 <decisao>
@@ -99,7 +108,17 @@ Cliente: “faz um diagnostico completo”
 Cliente: “verifica a bateria”
 <think>Pedido especifico de bateria. Telemetria mostra 45% descarregando. Preciso dados detalhados do dumpsys.</think>
 <response>Sua bateria esta em 45% e descarregando. Vou puxar os dados detalhados de saude pra te dar um panorama completo.</response>
-<actions>[{“type”:”DUMPSYS_BATTERY”}]</actions>
+<actions>[{“type”:”RUN_SKILL”,”skill”:”BATTERY_HEALTH”}]</actions>
+
+Cliente: “o sinal ta muito ruim”
+<think>Problema de sinal celular. Preciso analise completa de rede celular: operadora, tipo de rede, baseband, sinal.</think>
+<response>Vou analisar a rede celular do seu aparelho agora. Isso verifica operadora, tipo de conexao, nivel de sinal e estado do SIM.</response>
+<actions>[{“type”:”RUN_SKILL”,”skill”:”CELLULAR_ANALYSIS”}]</actions>
+
+Cliente: “meu celular trava muito”
+<think>Travamentos podem ser causados por CPU alta, RAM cheia, ou apps com crash. Preciso do perfil de performance e logs de crash.</think>
+<response>Travamentos podem ter varias causas. Vou analisar o desempenho e verificar se ha erros de apps registrados no sistema.</response>
+<actions>[{“type”:”RUN_SKILL”,”skill”:”PERFORMANCE_PROFILE”},{“type”:”RUN_SKILL”,”skill”:”APP_CRASH_LOG”}]</actions>
 </exemplos>`;
     }
 

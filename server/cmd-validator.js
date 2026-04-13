@@ -1,37 +1,149 @@
 class CmdValidator {
     constructor() {
-        // LOW RISK - Read-only diagnostics
+        // LOW RISK - Read-only diagnostics and information gathering
         this.lowRisk = [
             'help',
-            'dumpsys battery', 'dumpsys meminfo', 'dumpsys cpuinfo',
+
+            // === DUMPSYS (system service dumps) ===
+            'dumpsys battery', 'dumpsys batterystats',
+            'dumpsys meminfo', 'dumpsys cpuinfo', 'dumpsys procstats',
             'dumpsys wifi', 'dumpsys telephony.registry', 'dumpsys telephony registry',
             'dumpsys bluetooth_manager', 'dumpsys media.camera',
             'dumpsys connectivity', 'dumpsys activity',
+            'dumpsys package', 'dumpsys alarm', 'dumpsys notification',
+            'dumpsys window', 'dumpsys display', 'dumpsys power',
+            'dumpsys deviceidle', 'dumpsys usagestats',
+            'dumpsys netstats', 'dumpsys netpolicy',
+            'dumpsys iphonesubinfo', 'dumpsys telecom',
+            'dumpsys carrier_config', 'dumpsys phone',
+            'dumpsys mount', 'dumpsys diskstats',
+            'dumpsys sensorservice', 'dumpsys input',
+            'dumpsys audio', 'dumpsys media.audio_flinger',
+            'dumpsys gfxinfo', 'dumpsys graphicsstats',
+            'dumpsys accessibility', 'dumpsys account',
+            'dumpsys content', 'dumpsys statusbar',
+            'dumpsys -l',
+
+            // === PROC filesystem (read-only kernel info) ===
             'cat /proc/stat', 'cat /proc/meminfo', 'cat /proc/cpuinfo',
-            'cat /proc/loadavg', 'cat /proc/uptime',
-            'cat /proc/sched_debug', 'cat /sys/class/thermal/',
-            'cat /sys/class/kgsl/', 'cat /sys/devices/',
-            'df -h', 'free', 'top -n 1', 'ps -A',
-            'getprop', 'getprop ro.*', 'settings get',
-            'ifconfig', 'ip route', 'netstat -t',
-            'pm list packages', 'pm list features',
-            'dumpsys package', 'dumpsys alarm',
-            'logcat -d -t', 'cat /proc/loadavg',
-            'dumpsys telephony.registry', 'dumpsys connectivity'
+            'cat /proc/loadavg', 'cat /proc/uptime', 'cat /proc/version',
+            'cat /proc/sched_debug', 'cat /proc/vmstat',
+            'cat /proc/net/dev', 'cat /proc/net/tcp', 'cat /proc/net/tcp6',
+            'cat /proc/net/udp', 'cat /proc/net/wireless',
+            'cat /proc/diskstats', 'cat /proc/mounts',
+            'cat /proc/partitions', 'cat /proc/filesystems',
+
+            // === SYS filesystem (hardware/kernel info) ===
+            'cat /sys/class/thermal/', 'cat /sys/class/kgsl/',
+            'cat /sys/class/power_supply/', 'cat /sys/class/net/',
+            'cat /sys/devices/',
+
+            // === System tools ===
+            'df -h', 'df -k', 'free', 'top -n 1', 'ps -A', 'ps -ef',
+            'uptime', 'uname -a', 'id', 'whoami', 'date',
+            'ls -la /sdcard/', 'ls -la /data/local/tmp/',
+            'ls /sdcard/', 'ls /data/local/tmp/',
+            'wc -l',
+
+            // === Network diagnostics ===
+            'ifconfig', 'ip route', 'ip addr', 'ip link',
+            'netstat -t', 'netstat -tlnp', 'netstat -an',
+            'ping -c 3', 'ping -c 1',
+            'nslookup', 'getprop net.',
+
+            // === Getprop (all read-only) ===
+            'getprop',
+            'getprop ro.build.version.release',
+            'getprop ro.build.version.sdk',
+            'getprop ro.build.version.security_patch',
+            'getprop ro.product.model',
+            'getprop ro.product.manufacturer',
+            'getprop ro.product.brand',
+            'getprop ro.serialno',
+            'getprop ro.boot.selinux',
+            'getprop ro.crypto.state',
+            'getprop ro.hardware',
+            'getprop ro.board.platform',
+            'getprop gsm.',
+            'getprop persist.sys.',
+            'getprop net.',
+            'getprop ro.',
+            'getprop sys.',
+
+            // === Settings (read) ===
+            'settings get', 'settings list',
+
+            // === Package manager (read-only) ===
+            'pm list packages', 'pm list packages -3', 'pm list packages -s',
+            'pm list packages -d', 'pm list packages -e',
+            'pm list features', 'pm list permissions',
+            'pm list instrumentation',
+            'pm path', 'pm dump',
+
+            // === Logcat (read, with timestamp limit) ===
+            'logcat -d', 'logcat -d -t', 'logcat -d -b',
+            'logcat -d -s', 'logcat -d -v',
+            'logcat --pid=',
+
+            // === Service list ===
+            'service list', 'service check',
+
+            // === Content provider queries ===
+            'content query --uri',
+
+            // === Misc diagnostics ===
+            'cat /etc/hosts',
+            'mount',
+            'dumpsys SurfaceFlinger',
+            'dumpsys input_method'
         ];
 
         // MEDIUM RISK - Write operations, requires REPAIR mode
         this.mediumRisk = [
-            'am force-stop', 'pm clear', 'pm hide',
-            'pm disable-user', 'pm enable-user',
+            // === Activity manager ===
+            'am force-stop', 'am kill', 'am start', 'am startservice',
+            'am broadcast', 'am dumpheap',
+
+            // === Package manager (write) ===
+            'pm clear', 'pm hide', 'pm unhide',
+            'pm disable-user', 'pm enable', 'pm enable-user',
+            'pm grant', 'pm revoke',
+            'pm install', 'pm install-existing',
+            'pm uninstall --user 0',
+            'pm set-install-location',
+
+            // === Settings (write) ===
             'setprop', 'settings put',
+
+            // === Network control ===
             'svc wifi enable', 'svc wifi disable',
             'svc data enable', 'svc data disable',
+            'svc bluetooth enable', 'svc bluetooth disable',
+            'svc nfc enable', 'svc nfc disable',
+            'svc power stayon',
+
+            // === UI automation ===
             'input keyevent', 'input tap', 'input swipe',
+            'input text', 'input draganddrop',
+
+            // === Screen capture ===
             'screencap', 'screenrecord',
-            'monkey', 'logcat -c', 'logcat -d',
+
+            // === Logcat (write) ===
+            'logcat -c',
+
+            // === File operations (safe paths only) ===
             'mkdir /sdcard/', 'touch /sdcard/',
-            'chmod 644', 'chmod 755'
+            'rm /sdcard', 'cp /sdcard/',
+            'mkdir /data/local/tmp/', 'touch /data/local/tmp/',
+            'rm /data/local/tmp/',
+            'chmod 644', 'chmod 755',
+
+            // === Monkey (stress test) ===
+            'monkey',
+
+            // === ADB file transfer ===
+            'cat /sdcard/'
         ];
 
         // HIGH RISK - Destructive, requires FORENSIC mode + explicit confirm
@@ -39,29 +151,36 @@ class CmdValidator {
             'rm -rf /data/local/tmp',
             'rm /data/local/tmp',
             'factoryreset', 'wipe data', 'wipe_partition',
-            'reboot bootloader', 'reboot recovery',
+            'reboot', 'reboot bootloader', 'reboot recovery', 'reboot fastboot', 'reboot edl',
             'dd', 'mkfs', 'fdisk',
-            'busybox rm -rf', 'busybox dd'
+            'busybox rm -rf', 'busybox dd',
+            'pm uninstall',
+            'am kill-all'
         ];
 
         // BLOCKED - Never allowed (regex patterns)
         this.blocked = [
-            /^rm\s+-rf\s+\//, /^rm\s+-rf\s+system/, /^rm\s+-rf\s+data/,
-            /^dd\s+/, /^mkfs/, /^fdisk/, /^sfdisk/,
-            /^reboot\s+-f$/, /^shutdown/, /sysrq\s+[oebsu]/,
+            /^rm\s+-rf\s+\//, /^rm\s+-rf\s+\/system/, /^rm\s+-rf\s+\/data(?!\/local)/,
+            /^dd\s+if=/, /^mkfs\./, /^fdisk\s/, /^sfdisk/,
+            /^reboot\s+-[fp]$/, /^shutdown/, /sysrq\s+[oebsu]/,
             /:.*\|.*sh$/, /;\s*rm\s+/, /\$\(/, /`[^`]*`/,
             /&&\s*rm/, /\|\s*sh\s*$/, /\|\s*bash\s*$/, /\|\s*\/bin\/sh/,
-            /busybox\s+rm.*rf/,
-            /nc\s+-e/, /\/dev\/null/, /\|\s*sh\s*$/,
+            /busybox\s+rm\s.*-rf\s+\//,
+            /nc\s+-[elp]/, /\/dev\/null/, /\|\s*sh\s*$/,
             /eval\s+/, /exec\s+/, /;\s*sh\s*$/,
-            /2>&1/, /&\s*$/, /\|\s*grep.*-i.*pass/,
-            /^wget\s/, /^curl\s/
+            /&\s*$/, /\|\s*grep.*-i.*pass/,
+            /^wget\s/, /^curl\s/,
+            /^su\s/, /^su$/, /^chmod\s+[0-7]{3}\s+\/system/,
+            /^mount\s+-o\s+remount/,
+            /^flash_image/, /^erase_image/,
+            /^cat\s+\/dev\/block/
         ];
 
         this.dangerous = [
-            /\.\./, /proc\/sys\/core/, /sys\/firmware/,
+            /\.\.\//, /proc\/sys\/core/, /sys\/firmware\//,
             /sys\/kernel\/debug\//, /proc\/kcore/,
-            /\/system\/app\//, /\/data\/app\/.*\/lib/
+            /\/system\/app\//, /\/data\/app\/.*\/lib/,
+            /\/data\/data\//, /\/data\/system\//
         ];
     }
 
@@ -78,7 +197,7 @@ class CmdValidator {
             return { allowed: false, risk: 'UNKNOWN', reason: 'Invalid command' };
         }
 
-        // Normalize: trim, collapse whitespace, lowercase for matching
+        // Normalize: trim, collapse whitespace
         const t = cmd.trim().replace(/\s+/g, ' ');
         if (!t || t.length > 1000) {
             return { allowed: false, risk: 'UNKNOWN', reason: 'Command too long or empty' };

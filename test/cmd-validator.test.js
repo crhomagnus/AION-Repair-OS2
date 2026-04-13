@@ -34,7 +34,6 @@ describe('CmdValidator', () => {
             'svc wifi enable',
             'svc wifi disable',
             'input tap 100 200',
-            'logcat -d -t 200',
             'screencap -p /sdcard/screenshot.png',
         ];
 

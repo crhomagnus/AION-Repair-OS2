@@ -204,7 +204,7 @@ If another AI opens this repo, the fastest path is:
 ## Current Snapshot (2026-04-13 post-deploy)
 
 - The assistant is configured as AION in Portuguese (Brazil).
-- The current AI provider on the VPS is **DeepSeek Reasoner (R1)** via direct API. OpenRouter with `qwen/qwen3.6-plus` is supported as the alternate provider in code but not configured in the VPS `.env`.
+- The current AI provider on the VPS is **OpenRouter** with model `qwen/qwen3.6-plus`. DeepSeek Reasoner (R1) is configured as the alternate provider in the VPS `.env`.
 - The VPS `.env` does NOT have `API_TOKEN` or `ADMIN_TOKEN` — all endpoints are currently open.
 - The AI agent uses a zero-hallucination system prompt with 33 diagnostic skills and a tool execution loop.
 - The cmd-validator has 256 whitelisted commands plus an open policy for read-only commands.

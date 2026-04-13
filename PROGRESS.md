@@ -7,7 +7,7 @@ Current source of truth: [CONTEXT.md](/home/bluecamp/aion-repair-os/CONTEXT.md)
 
 - v7.0.3 deployed and running on VPS Hostinger (`http://31.97.83.152:3002`).
 - Git clean, synchronized with `origin/main` at commit `18e4c4b`.
-- AI provider: DeepSeek Reasoner (R1) via direct API.
+- AI provider: OpenRouter with `qwen/qwen3.6-plus` (DeepSeek R1 as fallback).
 - 33 diagnostic skills, 256 ADB commands (open policy for read-only).
 - Zero-hallucination system prompt with mandatory tool execution.
 - Device auto-tracking with connection diagnostics in PT-BR.
@@ -21,7 +21,7 @@ Current source of truth: [CONTEXT.md](/home/bluecamp/aion-repair-os/CONTEXT.md)
 - Deployed v7.0.3 to VPS via git pull + docker compose rebuild.
 - Confirmed healthy status: ADB connected (Redmi 12), AI configured.
 - Updated all project documentation to reflect actual deployed state.
-- Corrected AI provider documentation (DeepSeek R1, not OpenRouter/Qwen).
+- Configured OpenRouter with Qwen 3.6 Plus on VPS (was using outdated DeepSeek .env).
 
 ## Previous Work
 
@@ -40,4 +40,4 @@ Current source of truth: [CONTEXT.md](/home/bluecamp/aion-repair-os/CONTEXT.md)
 2. Configure domain + HTTPS (Nginx + Let's Encrypt).
 3. Configure `CORS_ORIGIN` to restrict to the domain.
 4. Keep the bridge running on the workstation when remote ADB access is needed.
-5. (Optional) Migrate from DeepSeek to OpenRouter/Qwen if desired.
+5. DeepSeek R1 configured as fallback in VPS .env if needed.

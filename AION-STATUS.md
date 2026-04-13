@@ -9,7 +9,7 @@
 ## Estado Atual
 
 O AION esta **em producao** na VPS Hostinger, rodando com:
-- **Modelo IA**: DeepSeek Reasoner (R1) via API direta
+- **Modelo IA**: Qwen 3.6 Plus (via OpenRouter)
 - **Container**: Docker, usuario non-root `aion`, network_mode: host
 - **33 Skills diagnosticos**, **256 comandos ADB** (open policy para read-only)
 - **Tool execution loop**: IA auto-executa acoes LOW risk e responde com dados reais
@@ -34,15 +34,15 @@ O AION esta **em producao** na VPS Hostinger, rodando com:
 
 ## Credenciais
 
-### DeepSeek (IA — provedor ativo)
-- **Chave**: ver .env local e VPS (DEEPSEEK_API_KEY)
-- **Modelo**: deepseek-reasoner (R1)
-- **Base URL**: https://api.deepseek.com
-
-### OpenRouter (alternativo, suportado no codigo)
-- **Modelo default**: qwen/qwen3.6-plus
+### OpenRouter (IA — provedor ativo)
+- **Chave**: ver .env no VPS (OPENROUTER_API_KEY)
+- **Modelo**: qwen/qwen3.6-plus
 - **Dashboard**: https://openrouter.ai
-- **Status**: nao configurado no .env atual
+
+### DeepSeek (alternativo, suportado no codigo)
+- **Chave**: ver .env no VPS (DEEPSEEK_API_KEY)
+- **Modelo**: deepseek-reasoner (R1)
+- **Status**: configurado como fallback
 
 ### Hostinger VPS
 - **IP**: 31.97.83.152
@@ -68,7 +68,7 @@ O AION esta **em producao** na VPS Hostinger, rodando com:
 |---|---|
 | Versao | 7.0.3 |
 | Status | healthy |
-| AI | configured (deepseek-reasoner) |
+| AI | configured (qwen/qwen3.6-plus via OpenRouter) |
 | Device | Redmi 12 (7b8127147d81), Android 13 |
 | CPU | 46% |
 | RAM | 46% |
@@ -126,7 +126,7 @@ Workstation (PC do Dr. Marcio)
 VPS Hostinger (31.97.83.152)
   +-- Docker Container (aion-repair-os, porta 3002)
   |   +-- Express + WebSocket server
-  |   +-- AI Agent (DeepSeek Reasoner R1)
+  |   +-- AI Agent (Qwen 3.6 Plus via OpenRouter)
   |   +-- ADB Bridge (conecta via tunel SSH, auto-tracking)
   |   +-- Sensor Poller (12 metricas a cada 500ms)
   |   +-- SkillRunner (33 diagnosticos compostos)
@@ -180,7 +180,7 @@ curl http://31.97.83.152:3002/api/health
 1. Configurar `API_TOKEN` e `ADMIN_TOKEN` no `.env` do VPS
 2. Configurar dominio + HTTPS (Nginx + Let's Encrypt)
 3. Configurar `CORS_ORIGIN` para restringir ao dominio
-4. (Opcional) Migrar de DeepSeek para OpenRouter/Qwen se desejado
+4. DeepSeek R1 disponivel como fallback no .env
 
 ---
 
@@ -191,5 +191,5 @@ curl http://31.97.83.152:3002/api/health
 3. O remote Git e `origin` -> `github.com/crhomagnus/AION-Repair-OS2`
 4. O deploy e via git pull + docker compose rebuild na VPS
 5. A chave SSH para a VPS e `/home/bluecamp/.ssh/aion_bridge_ed25519`
-6. O modelo IA e `deepseek-reasoner` (DeepSeek R1) — OpenRouter e alternativo
+6. O modelo IA e `qwen/qwen3.6-plus` via OpenRouter — DeepSeek R1 e fallback
 7. O .env do VPS NAO tem API_TOKEN — endpoints estao abertos

@@ -89,7 +89,7 @@ The repository does not contain a fully documented day-zero commit history, so t
 - App version is 7.0.3, commit `18e4c4b`
 - Remote Hostinger deployment is live and healthy
 - Secure bridge is live
-- AI provider: DeepSeek Reasoner (R1) via direct API
+- AI provider: OpenRouter with `qwen/qwen3.6-plus` (DeepSeek R1 as fallback)
 - The remote container sees the local USB phone through the bridge
 - Last observed device: Redmi 12 (Android 13)
 - The UI remains browser-only and button-light
@@ -641,7 +641,7 @@ Last live validation: 2026-04-13 post-deploy
 - device serial: `7b8127147d81`
 - Android version: 13
 - AI mode: online
-- AI model: `deepseek-reasoner` (DeepSeek R1)
+- AI model: `qwen/qwen3.6-plus` (OpenRouter)
 - last observed telemetry: CPU `46%`, RAM `46%`, GPU `0%`, temperature `33C`, battery `100%` charging, disk `15%`, signal `-103 dBm`, latency `0`, Bluetooth `false`, Wi-Fi `true`, camera `true`, memory `45%`
 
 These values are operational snapshots, not permanent constants. Recheck them if the deployment or the connected phone changes.
@@ -682,7 +682,7 @@ These values are operational snapshots, not permanent constants. Recheck them if
 - Pipe command support in cmd-validator (grep, head, tail, wc, sort, awk, sed)
 - AUDIO_ANALYSIS and DISPLAY_ANALYSIS skills with specific data commands
 - Deployed to VPS on 2026-04-13 — confirmed healthy with Redmi 12 connected
-- AI provider on VPS: DeepSeek Reasoner (R1), not OpenRouter
+- AI provider on VPS: OpenRouter with `qwen/qwen3.6-plus` (DeepSeek R1 as fallback)
 - current app version reported as `7.0.3`
 
 ## What another AI should inspect first

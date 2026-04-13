@@ -102,10 +102,10 @@ AION Repair OS e um sistema web de diagnostico e reparo de smartphones Android. 
 
 | Provider | Variavel | Valor | Status |
 |----------|----------|-------|--------|
-| DeepSeek | `DEEPSEEK_API_KEY` | `[REDACTED - ver .env na workstation e no VPS]` | Ativa, em uso no VPS |
-| DeepSeek | `DEEPSEEK_MODEL` | `deepseek-reasoner` (R1) | Ativo |
-| OpenRouter | `OPENROUTER_API_KEY` | Nao configurada no .env atual | Suportada no codigo como alternativa |
-| OpenRouter | `OPENROUTER_MODEL` | `qwen/qwen3.6-plus` (default no codigo) | Nao ativo |
+| OpenRouter | `OPENROUTER_API_KEY` | `[REDACTED - ver .env no VPS]` | Ativa, em uso no VPS |
+| OpenRouter | `OPENROUTER_MODEL` | `qwen/qwen3.6-plus` | Ativo (provedor principal) |
+| DeepSeek | `DEEPSEEK_API_KEY` | `[REDACTED - ver .env no VPS]` | Configurada como fallback |
+| DeepSeek | `DEEPSEEK_MODEL` | `deepseek-reasoner` (R1) | Fallback |
 
 ### 4.2 Chaves SSH
 
@@ -643,7 +643,7 @@ Status: sincronizado com origin
 Container: aion-repair-os (healthy)
 URL: http://31.97.83.152:3002
 Versao: 7.0.3
-AI: ONLINE (deepseek-reasoner / DeepSeek R1)
+AI: ONLINE (qwen/qwen3.6-plus via OpenRouter)
 Policy: ACTIVE (256 cmds, open policy read-only)
 Skills: 33 diagnosticos compostos
 Device: Redmi 12 (7b8127147d81), Android 13
@@ -674,7 +674,7 @@ ADMIN_TOKEN: NAO configurado
 1. Configurar `API_TOKEN` e `ADMIN_TOKEN` no `.env` do VPS (seguranca)
 2. Configurar dominio e HTTPS no VPS (Nginx + Let's Encrypt)
 3. Configurar `CORS_ORIGIN` para restringir ao dominio
-4. Avaliar migrar de DeepSeek R1 para OpenRouter/Qwen (custo vs qualidade)
+4. DeepSeek R1 disponivel como fallback no .env do VPS
 5. Ativar o executor autonomo quando necessario
 6. Configurar monitoramento externo (uptime)
 7. Backup automatico dos dados (`data/`)

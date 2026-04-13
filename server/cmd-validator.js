@@ -309,6 +309,41 @@ class CmdValidator {
             }
         }
 
+        // OPEN POLICY: Commands that passed all blocked/dangerous/high/medium checks
+        // are read-only by definition (no rm, reboot, dd, etc matched).
+        // Allow them as LOW risk — the agent needs freedom to investigate.
+        // Read-only commands (dumpsys, getprop, cat, ls, logcat -d, ps, etc.)
+        // that aren't in the whitelist but aren't dangerous either.
+        const readOnlyPrefixes = [
+            'dumpsys', 'getprop', 'cat /proc/', 'cat /sys/', 'ls ',
+            'ps ', 'top ', 'df ', 'free', 'uptime', 'uname',
+            'id', 'whoami', 'date', 'wm ', 'settings get', 'settings list',
+            'pm list', 'pm path', 'pm dump', 'service ', 'logcat -d',
+            'ip ', 'ifconfig', 'netstat', 'ping -c', 'nslookup',
+            'cat /etc/', 'mount', 'content query',
+        ];
+        for (const prefix of readOnlyPrefixes) {
+            if (tLower.startsWith(prefix)) {
+                return { allowed: true, risk: 'LOW', reason: 'Read-only command (open policy)' };
+            }
+        }
+
+        // Pipe commands: if left side is read-only and right side is grep/head/tail/wc/sort, allow
+        if (t.includes('|')) {
+            const parts = t.split('|').map(p => p.trim());
+            const leftCmd = parts[0].toLowerCase();
+            const rightCmds = parts.slice(1).map(p => p.trim().toLowerCase());
+            const leftIsReadOnly = readOnlyPrefixes.some(p => leftCmd.startsWith(p));
+            const rightIsSafe = rightCmds.every(r =>
+                r.startsWith('grep') || r.startsWith('head') || r.startsWith('tail') ||
+                r.startsWith('wc') || r.startsWith('sort') || r.startsWith('uniq') ||
+                r.startsWith('cut') || r.startsWith('awk') || r.startsWith('sed')
+            );
+            if (leftIsReadOnly && rightIsSafe) {
+                return { allowed: true, risk: 'LOW', reason: 'Read-only pipe (open policy)' };
+            }
+        }
+
         return { allowed: false, risk: 'UNKNOWN', reason: 'Command not in whitelist' };
     }
 

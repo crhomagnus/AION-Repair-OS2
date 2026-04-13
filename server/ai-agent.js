@@ -366,6 +366,7 @@ Cliente: “ja reiniciei e continua travando”
             if (!cmd) continue;
             const validation = this.validator.validateWithRisk(cmd);
             if (!validation.allowed) {
+                console.log(`[AI] BLOCKED command: "${cmd}" → ${validation.risk}: ${validation.reason}`);
                 results.push({ type: action.type, result: `Comando bloqueado: ${validation.reason}`, error: true });
                 continue;
             }
@@ -450,6 +451,9 @@ Cliente: “ja reiniciei e continua travando”
 
                     const followupRaw = await this._callAIProvider(toolContext, sensorData, context, history);
                     const followup = this._parseAIResponse(followupRaw);
+                    if (followup.actions.length > 0) {
+                        console.log(`[AI] Followup requested ${followup.actions.length} more action(s):`, JSON.stringify(followup.actions.map(a => ({ type: a.type, cmd: a.command, skill: a.skill }))));
+                    }
 
                     // Remove the injected messages from visible history
                     history.splice(-2, 2);

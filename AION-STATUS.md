@@ -1,14 +1,14 @@
 # AION Repair OS — Status do Projeto
 
 > Última atualização: 2026-04-13
-> Versão: 7.0.2 (com patches de segurança e otimização de IA)
+> Versão: 7.0.3 (com patches de segurança, continuidade e otimização de IA)
 
 ---
 
 ## Estado Atual
 
 O AION está **em produção** na VPS Hostinger, rodando com:
-- **Modelo IA**: Qwen 3.6 Plus (via OpenRouter, pago ~$0.50/$2.00 por 1M tokens)
+- **Modelo IA**: Qwen 3.6 Plus (via OpenRouter)
 - **Container**: Docker, usuário non-root `aion`, network_mode: host
 - **Autenticação**: Token-based (API_TOKEN) em todos os endpoints
 - **19 Skills diagnósticos**, **105 comandos ADB** whitelistados
@@ -55,6 +55,11 @@ O AION está **em produção** na VPS Hostinger, rodando com:
 ---
 
 ## Evolução de Versões
+
+### v7.0.3-continuity (2026-04-13)
+- Snapshot de continuidade atualizado para OpenRouter com `qwen/qwen3.6-plus`
+- Índice de versões ampliado com `updates/v7.0.3/README.md`
+- Documentação sincronizada para a próxima IA continuar sem drift de versão
 
 ### v7.0.2-security (2026-04-13)
 - Limpeza de credenciais do histórico Git (git-filter-repo)

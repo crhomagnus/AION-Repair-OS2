@@ -17,6 +17,7 @@ This folder holds versioned continuity snapshots.
 - `v7.0.0`
 - `v7.0.1`
 - `v7.0.2`
+- `v7.0.3`
 
 ## Rule
 

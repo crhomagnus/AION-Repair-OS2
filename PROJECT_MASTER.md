@@ -1,7 +1,7 @@
 # AION Repair OS - Master Continuity Document
 
-Last updated: 2026-04-11
-Current app version: 7.0.2
+Last updated: 2026-04-13
+Current app version: 7.0.3
 
 ## Scope
 
@@ -77,7 +77,7 @@ The repository does not contain a fully documented day-zero commit history, so t
 
 ### Phase 6: current state
 
-- App version is 7.0.2
+- App version is 7.0.3
 - Remote Hostinger deployment is live
 - Secure bridge is live
 - The remote container sees the local USB phone through the bridge
@@ -110,8 +110,8 @@ User browser
 | File | Status | Responsibility | Notes |
 |---|---|---|---|
 | `main.js` | Active | Loads `.env` and starts the server | Minimal bootstrap only |
-| `package.json` | Active | Package metadata, scripts, version, and dependency manifest | App version is `7.0.2` |
-| `package-lock.json` | Active | Locked dependency tree | Matches `7.0.2` metadata |
+| `package.json` | Active | Package metadata, scripts, version, and dependency manifest | App version is `7.0.3` |
+| `package-lock.json` | Active | Locked dependency tree | Matches `7.0.3` metadata |
 | `.env.example` | Active | Runtime environment template | Never store raw secrets in committed form |
 | `bridge/.env.example` | Active | Bridge environment template | Workstation-only companion configuration |
 | `server/index.js` | Active | HTTP API, WebSocket, sessions, chat, actions, audit, forensic capture | Core backend orchestrator |
@@ -133,7 +133,8 @@ User browser
 | `updates/README.md` | Active | Versioned snapshot index | Points to historical continuity folders |
 | `updates/v7.0.0/README.md` | Active | Snapshot of the AI/UI/telemetry refactor |
 | `updates/v7.0.1/README.md` | Active | Snapshot of Docker and ADB host/port deployment support |
-| `updates/v7.0.2/README.md` | Active | Snapshot of the secure bridge rollout |
+| `updates/v7.0.2/README.md` | Active | Historical snapshot of the secure bridge rollout |
+| `updates/v7.0.3/README.md` | Active | Snapshot of the continuity refresh and OpenRouter/Qwen alignment |
 
 ## Miscellaneous artifacts
 
@@ -622,11 +623,11 @@ If another AI needs the operational values, it should look in these places, not 
 Last live validation in this workspace showed:
 
 - remote endpoint: `http://31.97.83.152:3002`
-- app version: `7.0.2`
+- app version: `7.0.3`
 - device seen through the bridge: `Xiaomi Mi A3`
 - device serial: `cba9695ba0e3`
 - AI mode: online
-- AI model: `deepseek-reasoner`
+- AI model: `qwen/qwen3.6-plus`
 - last observed telemetry snapshot: CPU `43%`, RAM `53%`, GPU `0%`, temperature `75°C`, battery `46%` charging, disk `90%`, signal `-113 dBm`, latency `0`, Bluetooth `false`, Wi-Fi `true`, camera `true`, memory `50%`
 
 These values are operational snapshots, not permanent constants. Recheck them if the deployment or the connected phone changes.
@@ -658,6 +659,13 @@ These values are operational snapshots, not permanent constants. Recheck them if
 - VPS can see the USB phone through the bridge
 - app version reported as `7.0.2`
 
+### v7.0.3
+
+- continuity docs synchronized to the current OpenRouter/Qwen setup
+- OpenRouter default model aligned to `qwen/qwen3.6-plus`
+- versioned update index extended with `updates/v7.0.3/README.md`
+- current app version reported as `7.0.3`
+
 ## What another AI should inspect first
 
 If a new AI opens this repository, the fastest route is:
@@ -665,7 +673,7 @@ If a new AI opens this repository, the fastest route is:
 1. Read this file.
 2. Read `CONTEXT.md`.
 3. Read `updates/README.md`.
-4. Read `updates/v7.0.2/README.md`.
+4. Read `updates/v7.0.3/README.md`.
 5. Inspect `server/index.js`.
 6. Inspect `server/ai-agent.js`.
 7. Inspect `server/device-profile.js`.

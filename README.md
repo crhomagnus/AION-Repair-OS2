@@ -1,8 +1,11 @@
 # AION Repair OS
 
-See [PROJECT_MASTER.md](/home/bluecamp/aion-repair-os/PROJECT_MASTER.md) for the exhaustive handoff doc.
-See [CONTEXT.md](/home/bluecamp/aion-repair-os/CONTEXT.md) for the current continuity doc, status map, secrets policy, and update index.
-Latest continuity snapshot: [updates/v7.0.3/README.md](/home/bluecamp/aion-repair-os/updates/v7.0.3/README.md).
+Version 7.0.3 — deployed and running on VPS Hostinger.
+
+See [AION-STATUS.md](AION-STATUS.md) for the quick operational status.
+See [CONTEXT.md](CONTEXT.md) for the continuity doc, status map, and update index.
+See [PROJECT_MASTER.md](PROJECT_MASTER.md) for the exhaustive handoff doc.
+See [ESTADO_COMPLETO_DO_PROJETO.md](ESTADO_COMPLETO_DO_PROJETO.md) for the full project state.
 
 ## Quick Start
 

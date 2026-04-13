@@ -1,7 +1,7 @@
 # AION Repair OS - Project Continuity Context
 
-Last updated: 2026-04-13
-Version: 7.0.3
+Last updated: 2026-04-13 (post-deploy)
+Version: 7.0.3 — commit 18e4c4b deployed to VPS
 
 ## Document Relationship
 
@@ -41,15 +41,18 @@ AION Repair OS is a web-based Android diagnostic and repair system. The user tal
 | File | Status | Notes |
 |---|---|---|
 | `main.js` | Active | Loads `.env` and starts the server. |
-| `server/index.js` | Active | REST API, WebSocket, sessions, chat, command execution, AI config, forensic capture. |
-| `server/adb-bridge.js` | Active | Validates connected devices, reads props/memory/storage, builds device profiles. |
+| `server/index.js` | Active | REST API, WebSocket, sessions, chat, command execution, AI config, forensic capture. ~840 lines. |
+| `server/adb-bridge.js` | Active | Device tracking, auto-connect, connection diagnostics (PT-BR), host-side ADB commands. ~560 lines. |
 | `server/device-profile.js` | Active | Resolves brand, model, chipset, memory, storage, and image metadata for the current device. |
 | `server/sensor-poller.js` | Active | Polls CPU, RAM, GPU, temperature, battery, storage, signal, latency, Bluetooth, Wi-Fi, camera, and memory. |
-| `server/cmd-validator.js` | Active | Whitelist, denylist, and risk tiers for ADB commands. |
-| `server/ai-agent.js` | Active | Web-only AI provider integration, adaptive vocabulary, no offline reply path. |
-| `server/ai-executor.js` | Present | Autonomous executor logic exists and can emit recommended actions. |
+| `server/cmd-validator.js` | Active | 256 commands, open policy for read-only, pipe support. ~355 lines. |
+| `server/ai-agent.js` | Active | AI provider integration, 33 skills, tool execution loop, zero-hallucination prompt. ~760 lines. |
+| `server/skills.js` | Active | 33 diagnostic skills (core, network, performance, apps, hardware, baseband, forensic). ~500 lines. |
+| `server/ai-executor.js` | Present | Autonomous executor logic exists and can emit recommended actions. Opt-in via EXECUTOR_ENABLED. |
+| `server/store.js` | Active | Persistent audit log (JSONL) and sessions (JSON) with auto-rotation. |
+| `server/logger.js` | Active | Structured logger with JSON mode support. |
 | `bridge/local-bridge.js` | Active | Starts the local ADB server and opens the SSH reverse tunnel to the VPS. |
-| `web/index.html` | Active | Dark neon UI, buttonless interaction model, device image panel, telemetry, activity feed, chat. |
+| `web/index.html` | Active | Dark neon UI, buttonless interaction model, device image panel, telemetry, activity feed, chat. ~1730 lines. |
 
 ## Current Implementation Status
 
@@ -198,23 +201,34 @@ If another AI opens this repo, the fastest path is:
 8. Open `http://127.0.0.1:3001`.
 9. Verify `/api/status`, `/api/devices`, `/api/sensors`, and `/api/chat`.
 
-## Current Snapshot
+## Current Snapshot (2026-04-13 post-deploy)
 
 - The assistant is configured as AION in Portuguese (Brazil).
-- The current AI provider is OpenRouter with `qwen/qwen3.6-plus`; DeepSeek remains supported as the alternate provider when configured.
+- The current AI provider on the VPS is **DeepSeek Reasoner (R1)** via direct API. OpenRouter with `qwen/qwen3.6-plus` is supported as the alternate provider in code but not configured in the VPS `.env`.
+- The VPS `.env` does NOT have `API_TOKEN` or `ADMIN_TOKEN` — all endpoints are currently open.
+- The AI agent uses a zero-hallucination system prompt with 33 diagnostic skills and a tool execution loop.
+- The cmd-validator has 256 whitelisted commands plus an open policy for read-only commands.
 - The UI is dark, neon, and mostly read-only.
 - The assistant adapts to lay users or repair technicians.
 - Offline AI replies are disabled.
 - The device profile panel resolves model-specific images and hardware data.
-- The Hostinger VPS deployment is live through Docker on `http://31.97.83.152:3002`.
-- The remote container now sees the local phone through the SSH reverse tunnel on host port `5037`.
+- The Hostinger VPS deployment is live through Docker on `http://31.97.83.152:3002` running v7.0.3.
+- The remote container sees the local phone through the SSH reverse tunnel on host port `5037`.
 - The bridge process lives in `bridge/local-bridge.js` and is run on the workstation with the phone connected by USB.
-- Current worktree contains uncommitted changes and should be read carefully before any refactor.
+- Last observed device: Redmi 12 (serial `7b8127147d81`), Android 13.
+- Git worktree is clean, synchronized with `origin/main` at commit `18e4c4b`.
 
 ## Update Index
 
-- `updates/v7.0.3/README.md` contains the current implementation snapshot.
+- `updates/v7.0.3/README.md` contains the v7.0.3 continuity snapshot.
 - Future improvements should get their own versioned folder under `updates/`.
+
+## Git Status
+
+- Branch: `main`
+- Last commit: `18e4c4b` — fix: open policy for read-only commands
+- Origin: synchronized
+- VPS: deployed and running v7.0.3
 
 ## Notes for Future Maintenance
 

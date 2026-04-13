@@ -1,7 +1,7 @@
 # AION Repair OS - Estado Completo do Projeto
 
-Data de geracao: 2026-04-13
-Versao: 7.0.3
+Data de geracao: 2026-04-13 (pos-deploy)
+Versao: 7.0.3 — commit 18e4c4b deployado no VPS
 Gerado por: Claude Opus 4.6 (1M context)
 
 ---
@@ -102,9 +102,10 @@ AION Repair OS e um sistema web de diagnostico e reparo de smartphones Android. 
 
 | Provider | Variavel | Valor | Status |
 |----------|----------|-------|--------|
-| OpenRouter | `OPENROUTER_API_KEY` | `[REDACTED - ver .env na workstation e no VPS]` | Ativa, em uso no VPS |
-| OpenRouter | `OPENROUTER_MODEL` | `qwen/qwen3.6-plus` | Ativo |
-| DeepSeek | `DEEPSEEK_API_KEY` | Nao configurada no estado atual | Disponivel como alternativa no codigo |
+| DeepSeek | `DEEPSEEK_API_KEY` | `[REDACTED - ver .env na workstation e no VPS]` | Ativa, em uso no VPS |
+| DeepSeek | `DEEPSEEK_MODEL` | `deepseek-reasoner` (R1) | Ativo |
+| OpenRouter | `OPENROUTER_API_KEY` | Nao configurada no .env atual | Suportada no codigo como alternativa |
+| OpenRouter | `OPENROUTER_MODEL` | `qwen/qwen3.6-plus` (default no codigo) | Nao ativo |
 
 ### 4.2 Chaves SSH
 
@@ -126,8 +127,9 @@ AION Repair OS e um sistema web de diagnostico e reparo de smartphones Android. 
 
 | Variavel | Descricao | Valor atual |
 |----------|-----------|-------------|
-| `ADMIN_TOKEN` | Protege POST /api/ai/key e executor | Nao configurado (aberto) |
-| `CORS_ORIGIN` | Restringe origens CORS | Nao configurado (permissivo) |
+| `API_TOKEN` | Protege todos os endpoints /api/* | NAO configurado (aberto) |
+| `ADMIN_TOKEN` | Protege POST /api/ai/key e executor | NAO configurado (aberto) |
+| `CORS_ORIGIN` | Restringe origens CORS | NAO configurado (permissivo) |
 | `RATE_LIMIT_WINDOW` | Janela de rate limiting (ms) | 60000 (1 min) |
 | `RATE_LIMIT_MAX` | Max requests por janela por IP | 30 |
 | `EXECUTOR_ENABLED` | Habilita executor autonomo | `false` (desligado) |
@@ -136,7 +138,7 @@ AION Repair OS e um sistema web de diagnostico e reparo de smartphones Android. 
 
 ## 5. ARQUITETURA DO PROJETO
 
-### 5.1 Mapa de arquivos (4.681 linhas de codigo)
+### 5.1 Mapa de arquivos (~5.200 linhas de codigo)
 
 ```
 aion-repair-os/
@@ -151,21 +153,22 @@ aion-repair-os/
   docker-compose.yml               # Host networking, porta 3002, healthcheck
   
   server/
-    index.js              (692 linhas) # Servidor principal: Express, WebSocket, API REST
-    ai-agent.js           (414 linhas) # Integracao IA: prompt AION, DeepSeek/OpenRouter
-    ai-executor.js        (148 linhas) # Executor autonomo (opt-in)
-    adb-bridge.js          (84 linhas) # Cliente ADB: listDevices, connect, execute, profile
-    cmd-validator.js      (121 linhas) # Politica de seguranca: allow/deny/risk
-    device-profile.js     (560 linhas) # Perfil do device: brand, model, chipset, imagem
-    sensor-poller.js      (226 linhas) # Telemetria: CPU, RAM, GPU, temp, bateria, etc
-    logger.js              (47 linhas) # Logger estruturado com JSON mode
-    store.js              (146 linhas) # Persistencia: audit JSONL + sessions JSON
+    index.js              (~840 linhas) # Servidor principal: Express, WebSocket, API REST
+    ai-agent.js           (~760 linhas) # Agente IA: prompt zero-hallucination, tool loop, 33 skills
+    ai-executor.js        (~149 linhas) # Executor autonomo (opt-in)
+    adb-bridge.js         (~560 linhas) # Cliente ADB: tracking, diagnosticos, host-side cmds
+    cmd-validator.js      (~355 linhas) # 256 cmds, open policy read-only, pipe support
+    device-profile.js     (~560 linhas) # Perfil do device: brand, model, chipset, imagem
+    sensor-poller.js      (~227 linhas) # Telemetria: 12 metricas a cada 500ms
+    skills.js             (~500 linhas) # 33 skills diagnosticos compostos
+    logger.js              (~47 linhas) # Logger estruturado com JSON mode
+    store.js              (~146 linhas) # Persistencia: audit JSONL + sessions JSON
   
   web/
-    index.html           (1611 linhas) # UI dark neon: chat, telemetria, device panel
+    index.html           (~1730 linhas) # UI dark neon: chat, telemetria, device panel
   
   bridge/
-    local-bridge.js       (194 linhas) # Tunel SSH reverso workstation -> VPS
+    local-bridge.js       (~194 linhas) # Tunel SSH reverso workstation -> VPS
     .env.example                       # Config do bridge
     README.md                          # Documentacao do bridge
     aion-bridge.service                # Systemd service para auto-start
@@ -174,9 +177,9 @@ aion-repair-os/
     aion.conf                          # Template Nginx reverse proxy + HTTPS
   
   test/
-    cmd-validator.test.js (147 linhas) # Testes do validador de comandos
-    device-profile.test.js(115 linhas) # Testes do perfil de device
-    server-integration.test.js (176 linhas) # Testes de integracao do server
+    cmd-validator.test.js              # Testes do validador de comandos
+    device-profile.test.js             # Testes do perfil de device
+    server-integration.test.js         # Testes de integracao do server
   
   .github/
     workflows/
@@ -187,11 +190,13 @@ aion-repair-os/
     v7.0.0/README.md                   # Snapshot: AI/UI/telemetria
     v7.0.1/README.md                   # Snapshot: Docker, ADB remoto
     v7.0.2/README.md                   # Snapshot: SSH bridge
-    v7.0.3/README.md                   # Snapshot: continuidade + OpenRouter/Qwen
+    v7.0.3/README.md                   # Snapshot: 33 skills, 256 cmds, zero-hallucination
   
   CONTEXT.md                           # Doc de continuidade condensado
   PROJECT_MASTER.md                    # Doc de handoff exaustivo
   PROGRESS.md                          # Snapshot de progresso
+  AION-STATUS.md                       # Status operacional rapido
+  ESTADO_COMPLETO_DO_PROJETO.md        # Estado completo detalhado
   HOSTINGER_TRANSFER.md                # Notas de deploy Hostinger
   RUNBOOK.md                           # Guia operacional completo
   README.md                            # Quick start
@@ -622,13 +627,13 @@ journalctl -u aion-bridge -f          # Logs em tempo real
 
 ---
 
-## 17. ESTADO ATUAL DO SISTEMA (2026-04-13)
+## 17. ESTADO ATUAL DO SISTEMA (2026-04-13, pos-deploy)
 
 ### 17.1 GitHub
 
 ```
 Branch: main
-Ultimo commit: 6cb51d5
+Ultimo commit: 18e4c4b (fix: open policy for read-only commands)
 Status: sincronizado com origin
 ```
 
@@ -638,32 +643,38 @@ Status: sincronizado com origin
 Container: aion-repair-os (healthy)
 URL: http://31.97.83.152:3002
 Versao: 7.0.3
-AI: ONLINE (qwen/qwen3.6-plus)
-Policy: ACTIVE
-Sessions: 0
-ADB: disconnected (bridge nao esta rodando)
+AI: ONLINE (deepseek-reasoner / DeepSeek R1)
+Policy: ACTIVE (256 cmds, open policy read-only)
+Skills: 33 diagnosticos compostos
+Device: Redmi 12 (7b8127147d81), Android 13
+ADB: connected (bridge ativo)
+Telemetria: CPU 46%, RAM 46%, temp 33C, bat 100%, disco 15%
+API_TOKEN: NAO configurado
+ADMIN_TOKEN: NAO configurado
 ```
 
 ### 17.3 Testes
 
 ```
-61 testes, 0 falhas
+61 testes (46 pass, 14 cancelled - deps de integracao), 0 falhas
 0 vulnerabilidades npm
 ```
 
 ### 17.4 O que falta para producao completa
 
-1. Configurar `ADMIN_TOKEN` no `.env` do VPS
+1. Configurar `API_TOKEN` e `ADMIN_TOKEN` no `.env` do VPS
 2. Configurar dominio + HTTPS (Nginx + Let's Encrypt)
-3. Iniciar o bridge na workstation com o celular
-4. (Opcional) Configurar `CORS_ORIGIN` para restringir ao dominio
+3. Configurar `CORS_ORIGIN` para restringir ao dominio
+4. (Opcional) Migrar de DeepSeek para OpenRouter/Qwen
 
 ---
 
 ## 18. PROXIMOS PASSOS SUGERIDOS
 
-1. Configurar dominio e HTTPS no VPS
-2. Iniciar implementacao de features novas (fase de implementacao)
-3. Ativar o executor autonomo quando necessario
-4. Configurar monitoramento externo (uptime)
-5. Backup automatico dos dados (`data/`)
+1. Configurar `API_TOKEN` e `ADMIN_TOKEN` no `.env` do VPS (seguranca)
+2. Configurar dominio e HTTPS no VPS (Nginx + Let's Encrypt)
+3. Configurar `CORS_ORIGIN` para restringir ao dominio
+4. Avaliar migrar de DeepSeek R1 para OpenRouter/Qwen (custo vs qualidade)
+5. Ativar o executor autonomo quando necessario
+6. Configurar monitoramento externo (uptime)
+7. Backup automatico dos dados (`data/`)

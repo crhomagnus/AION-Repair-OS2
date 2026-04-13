@@ -1,41 +1,48 @@
 # AION Repair OS — Status do Projeto
 
-> Última atualização: 2026-04-13
-> Versão: 7.0.3 (com patches de segurança, continuidade e otimização de IA)
+> Ultima atualizacao: 2026-04-13
+> Versao: 7.0.3 (deploy confirmado no VPS)
+> Ultimo deploy: 2026-04-13 — commit 18e4c4b
 
 ---
 
 ## Estado Atual
 
-O AION está **em produção** na VPS Hostinger, rodando com:
-- **Modelo IA**: Qwen 3.6 Plus (via OpenRouter)
-- **Container**: Docker, usuário non-root `aion`, network_mode: host
-- **Autenticação**: Token-based (API_TOKEN) em todos os endpoints
-- **19 Skills diagnósticos**, **105 comandos ADB** whitelistados
-- **Tool execution loop**: IA auto-executa ações LOW risk e responde com dados reais
+O AION esta **em producao** na VPS Hostinger, rodando com:
+- **Modelo IA**: DeepSeek Reasoner (R1) via API direta
+- **Container**: Docker, usuario non-root `aion`, network_mode: host
+- **33 Skills diagnosticos**, **256 comandos ADB** (open policy para read-only)
+- **Tool execution loop**: IA auto-executa acoes LOW risk e responde com dados reais
+- **System prompt**: zero-tolerance para alucinacao, esforco maximo sempre
+- **Autenticacao**: NAO configurada (API_TOKEN e ADMIN_TOKEN ausentes no .env do VPS)
 
 ---
 
 ## Infraestrutura
 
-| Componente | Localização | Detalhes |
+| Componente | Localizacao | Detalhes |
 |---|---|---|
 | **VPS** | Hostinger (srv907802.hstgr.cloud) | IP: 31.97.83.152 |
 | **EasyPanel** | http://31.97.83.152:3000 | Painel de controle |
 | **AION Web** | http://31.97.83.152:3002 | Interface principal |
-| **Projeto na VPS** | /opt/aion-repair-os/ | Código + .env |
+| **Projeto na VPS** | /opt/aion-repair-os/ | Codigo + .env |
 | **Projeto local** | /home/bluecamp/aion-repair-os/ | Desenvolvimento |
-| **GitHub** | github.com/crhomagnus/AION-Repair-OS2 | Repositório |
-| **SSH Bridge** | aion_bridge_ed25519 | Túnel ADB local→VPS |
+| **GitHub** | github.com/crhomagnus/AION-Repair-OS2 | Repositorio |
+| **SSH Bridge** | aion_bridge_ed25519 | Tunel ADB local->VPS |
 
 ---
 
 ## Credenciais
 
-### OpenRouter (IA)
-- **Chave**: ver .env local e VPS
-- **Modelo**: qwen/qwen3.6-plus
+### DeepSeek (IA — provedor ativo)
+- **Chave**: ver .env local e VPS (DEEPSEEK_API_KEY)
+- **Modelo**: deepseek-reasoner (R1)
+- **Base URL**: https://api.deepseek.com
+
+### OpenRouter (alternativo, suportado no codigo)
+- **Modelo default**: qwen/qwen3.6-plus
 - **Dashboard**: https://openrouter.ai
+- **Status**: nao configurado no .env atual
 
 ### Hostinger VPS
 - **IP**: 31.97.83.152
@@ -43,9 +50,10 @@ O AION está **em produção** na VPS Hostinger, rodando com:
 - **SSH Key**: /home/bluecamp/.ssh/aion_bridge_ed25519
 - **Porta SSH**: 22
 
-### AION Authentication
-- **API_TOKEN**: ver .env local e VPS
-- **ADMIN_TOKEN**: mesmo que API_TOKEN (pode ser separado)
+### Seguranca da Aplicacao
+- **API_TOKEN**: NAO configurado (todos os endpoints abertos)
+- **ADMIN_TOKEN**: NAO configurado (endpoints admin abertos)
+- **CORS_ORIGIN**: NAO configurado (permissivo)
 
 ### GitHub
 - **Repo**: AION-Repair-OS2
@@ -54,41 +62,56 @@ O AION está **em produção** na VPS Hostinger, rodando com:
 
 ---
 
-## Evolução de Versões
+## Ultimo Snapshot Operacional (2026-04-13)
 
-### v7.0.3-continuity (2026-04-13)
-- Snapshot de continuidade atualizado para OpenRouter com `qwen/qwen3.6-plus`
-- Índice de versões ampliado com `updates/v7.0.3/README.md`
-- Documentação sincronizada para a próxima IA continuar sem drift de versão
+| Metrica | Valor |
+|---|---|
+| Versao | 7.0.3 |
+| Status | healthy |
+| AI | configured (deepseek-reasoner) |
+| Device | Redmi 12 (7b8127147d81), Android 13 |
+| CPU | 46% |
+| RAM | 46% |
+| Temperatura | 33C |
+| Bateria | 100% (carregando) |
+| Disco | 15% |
+| WiFi | conectado |
+| Bluetooth | inativo |
+| Sinal celular | -103 dBm |
+
+---
+
+## Evolucao de Versoes
+
+### v7.0.3 (2026-04-13) — VERSAO ATUAL
+- System prompt reescrito: zero-tolerance para alucinacao, esforco maximo
+- 33 skills diagnosticos (era 19)
+- 256 comandos ADB (era 105)
+- Open policy para comandos read-only (agente investiga livremente)
+- Host-side ADB commands (bugreport, backup, pull/push)
+- Pipe commands (grep, head, tail, wc, sort, awk, sed)
+- AUDIO_ANALYSIS e DISPLAY_ANALYSIS com comandos especificos de dados
+- Deploy confirmado no VPS em 2026-04-13
 
 ### v7.0.2-security (2026-04-13)
-- Limpeza de credenciais do histórico Git (git-filter-repo)
-- Autenticação token-based em todas as rotas + WebSocket
-- Isolamento de sessão (histórico IA por sessão, broadcast filtrado)
+- Autenticacao token-based em todas as rotas + WebSocket
+- Isolamento de sessao (historico IA por sessao, broadcast filtrado)
 - Hardening do cmd-validator (path traversal fix, SHELL_SAFE validation)
-- Input validation (enums, limites, CORS restritivo)
 - Container non-root, rate limiter cleanup
 
 ### v7.0.2-ai-optimization (2026-04-13)
 - System prompt reestruturado com XML tags (<think>/<response>/<actions>)
-- Parser de resposta com fallback automático
+- Parser de resposta com fallback automatico
 - Tool execution loop (auto-executa LOW risk, injeta resultados, re-chama IA)
-- 8 skills diagnósticos iniciais
 
 ### v7.0.2-knowledge-expansion (2026-04-13)
-- Expansão para 19 skills, 105 comandos ADB
-- Novos skills: CELLULAR_ANALYSIS, WIFI_ANALYSIS, BLUETOOTH_ANALYSIS,
-  PROCESS_ANALYSIS, APP_CRASH_LOG, HARDWARE_PROFILE, DEVICE_IDENTITY,
-  LOG_COLLECTION, FORENSIC_SNAPSHOT, DISPLAY_ANALYSIS, AUDIO_ANALYSIS
-- cmd-validator expandido com 100+ entradas (dumpsys 30+, getprop 15+, etc.)
-- Few-shot examples expandidos para cenários de rede e performance
+- Expansao para 19 skills, 105 comandos ADB
+- cmd-validator expandido com 100+ entradas
 
-### v7.0.0 (original, antes das mudanças)
+### v7.0.0 (original)
 - DeepSeek R1 como modelo IA
-- Sem autenticação
-- Histórico IA compartilhado entre sessões
-- 8 skills básicos, ~30 comandos whitelistados
-- Credenciais expostas no Git
+- Sem autenticacao
+- 8 skills basicos, ~30 comandos whitelistados
 
 ---
 
@@ -96,70 +119,77 @@ O AION está **em produção** na VPS Hostinger, rodando com:
 
 ```
 Workstation (PC do Dr. Marcio)
-  ├── ADB Server (porta 5037, celulares USB)
-  ├── SSH Bridge (local-bridge.js → VPS)
-  └── Código fonte (/home/bluecamp/aion-repair-os/)
+  +-- ADB Server (porta 5037, celulares USB)
+  +-- SSH Bridge (local-bridge.js -> VPS)
+  +-- Codigo fonte (/home/bluecamp/aion-repair-os/)
 
 VPS Hostinger (31.97.83.152)
-  ├── Docker Container (aion-repair-os, porta 3002)
-  │   ├── Express + WebSocket server
-  │   ├── AI Agent (Qwen 3.6 Plus via OpenRouter)
-  │   ├── ADB Bridge (conecta via túnel SSH)
-  │   ├── Sensor Poller (12 métricas a cada 2s)
-  │   ├── SkillRunner (19 diagnósticos compostos)
-  │   └── Cmd Validator (100+ comandos whitelistados)
-  ├── EasyPanel (porta 3000)
-  └── SSH Tunnel Listener (porta 5037)
+  +-- Docker Container (aion-repair-os, porta 3002)
+  |   +-- Express + WebSocket server
+  |   +-- AI Agent (DeepSeek Reasoner R1)
+  |   +-- ADB Bridge (conecta via tunel SSH, auto-tracking)
+  |   +-- Sensor Poller (12 metricas a cada 500ms)
+  |   +-- SkillRunner (33 diagnosticos compostos)
+  |   +-- Cmd Validator (256 comandos, open policy read-only)
+  +-- EasyPanel (porta 3000)
+  +-- SSH Tunnel Listener (porta 5037)
 
 Browser (qualquer lugar)
-  └── UI em http://31.97.83.152:3002
-      ├── Token de autenticação (localStorage)
-      ├── WebSocket (telemetria em tempo real)
-      └── Chat com IA (ações sugeridas automaticamente)
+  +-- UI em http://31.97.83.152:3002
+      +-- WebSocket (telemetria em tempo real)
+      +-- Chat com IA (tool loop automatico)
 ```
 
 ---
 
-## Arquivos Críticos
+## Arquivos Criticos
 
-| Arquivo | Linhas | Função |
+| Arquivo | Linhas | Funcao |
 |---|---|---|
-| server/index.js | ~820 | Servidor principal, rotas, WebSocket, auth |
-| server/ai-agent.js | ~500 | Agente IA, prompt, parser, tool loop |
-| server/skills.js | ~450 | 19 skills diagnósticos compostos |
-| server/cmd-validator.js | ~180 | Whitelist de comandos ADB por risco |
-| server/adb-bridge.js | ~477 | Comunicação ADB, device tracking |
-| server/sensor-poller.js | ~227 | Telemetria (12 métricas) |
-| server/store.js | ~146 | Persistência (sessões + audit log) |
-| server/ai-executor.js | ~149 | Executor autônomo (opt-in) |
-| web/index.html | ~1730 | Frontend completo |
+| server/index.js | ~840 | Servidor principal, rotas, WebSocket, auth |
+| server/ai-agent.js | ~760 | Agente IA, prompt, parser, tool loop |
+| server/skills.js | ~500 | 33 skills diagnosticos compostos |
+| server/cmd-validator.js | ~355 | Whitelist + open policy para read-only |
+| server/adb-bridge.js | ~560 | Comunicacao ADB, device tracking, diagnosticos |
+| server/sensor-poller.js | ~227 | Telemetria (12 metricas) |
+| server/store.js | ~146 | Persistencia (sessoes + audit log) |
+| server/ai-executor.js | ~149 | Executor autonomo (opt-in) |
+| server/logger.js | ~47 | Logger estruturado |
+| web/index.html | ~1730 | Frontend dark neon completo |
 
 ---
 
 ## Deploy
 
 ```bash
-# Na VPS:
-cd /opt/aion-repair-os
-docker compose down && docker compose up -d --build
+# Via Git (recomendado):
+SSH_KEY="/home/bluecamp/.ssh/aion_bridge_ed25519"
+ssh -i $SSH_KEY root@31.97.83.152 "cd /opt/aion-repair-os && git fetch origin && git reset --hard origin/main && docker compose down && docker compose up -d --build"
 
 # Bridge (no PC local):
 node bridge/local-bridge.js
 
-# Ou via SCP do local:
-SSH_KEY="/home/bluecamp/.ssh/aion_bridge_ed25519"
-scp -i $SSH_KEY server/*.js root@31.97.83.152:/opt/aion-repair-os/server/
-ssh -i $SSH_KEY root@31.97.83.152 "cd /opt/aion-repair-os && docker compose down && docker compose up -d --build"
+# Verificar:
+curl http://31.97.83.152:3002/api/health
 ```
 
 ---
 
-## Para a Próxima IA
+## Pendencias para Producao Completa
 
-1. O código está em `/home/bluecamp/aion-repair-os/`
-2. Credenciais estão no `.env` local e no `CREDENCIAIS_LOCAIS.md`
-3. O remote Git é `origin` → `github.com/crhomagnus/AION-Repair-OS2`
-4. O deploy é via SCP + docker compose rebuild na VPS
-5. A chave SSH para a VPS é `/home/bluecamp/.ssh/aion_bridge_ed25519`
-6. O token de API do AION está no `.env` (API_TOKEN)
-7. O modelo IA é `qwen/qwen3.6-plus` via OpenRouter
+1. Configurar `API_TOKEN` e `ADMIN_TOKEN` no `.env` do VPS
+2. Configurar dominio + HTTPS (Nginx + Let's Encrypt)
+3. Configurar `CORS_ORIGIN` para restringir ao dominio
+4. (Opcional) Migrar de DeepSeek para OpenRouter/Qwen se desejado
+
+---
+
+## Para a Proxima IA
+
+1. O codigo esta em `/home/bluecamp/aion-repair-os/`
+2. Credenciais estao no `.env` local e no `CREDENCIAIS_LOCAIS.md`
+3. O remote Git e `origin` -> `github.com/crhomagnus/AION-Repair-OS2`
+4. O deploy e via git pull + docker compose rebuild na VPS
+5. A chave SSH para a VPS e `/home/bluecamp/.ssh/aion_bridge_ed25519`
+6. O modelo IA e `deepseek-reasoner` (DeepSeek R1) — OpenRouter e alternativo
+7. O .env do VPS NAO tem API_TOKEN — endpoints estao abertos

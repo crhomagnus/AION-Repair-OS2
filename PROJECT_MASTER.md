@@ -1,7 +1,7 @@
 # AION Repair OS - Master Continuity Document
 
-Last updated: 2026-04-13
-Current app version: 7.0.3
+Last updated: 2026-04-13 (post-deploy)
+Current app version: 7.0.3 — commit 18e4c4b deployed to VPS
 
 ## Scope
 
@@ -75,13 +75,25 @@ The repository does not contain a fully documented day-zero commit history, so t
 - VPS container uses host networking to see the forwarded ADB port on `127.0.0.1`
 - Dedicated bridge SSH key, separate from the VPS admin key
 
-### Phase 6: current state
+### Phase 6: AI agent rewrite
 
-- App version is 7.0.3
-- Remote Hostinger deployment is live
+- System prompt rewritten with zero-hallucination rules
+- 33 diagnostic skills (core, network, performance, apps, hardware, baseband, forensic)
+- 256 ADB commands with open policy for read-only
+- Tool execution loop: AI auto-executes LOW risk actions and re-calls with results
+- Host-side ADB commands: bugreport, backup, pull/push
+- Pipe command support in cmd-validator
+
+### Phase 7: current state
+
+- App version is 7.0.3, commit `18e4c4b`
+- Remote Hostinger deployment is live and healthy
 - Secure bridge is live
+- AI provider: DeepSeek Reasoner (R1) via direct API
 - The remote container sees the local USB phone through the bridge
+- Last observed device: Redmi 12 (Android 13)
 - The UI remains browser-only and button-light
+- API_TOKEN and ADMIN_TOKEN are NOT configured on the VPS
 
 ## Current live topology
 
@@ -620,15 +632,17 @@ If another AI needs the operational values, it should look in these places, not 
 
 ## Current live validation snapshot
 
-Last live validation in this workspace showed:
+Last live validation: 2026-04-13 post-deploy
 
 - remote endpoint: `http://31.97.83.152:3002`
 - app version: `7.0.3`
-- device seen through the bridge: `Xiaomi Mi A3`
-- device serial: `cba9695ba0e3`
+- commit: `18e4c4b`
+- device seen through the bridge: `Redmi 12`
+- device serial: `7b8127147d81`
+- Android version: 13
 - AI mode: online
-- AI model: `qwen/qwen3.6-plus`
-- last observed telemetry snapshot: CPU `43%`, RAM `53%`, GPU `0%`, temperature `75°C`, battery `46%` charging, disk `90%`, signal `-113 dBm`, latency `0`, Bluetooth `false`, Wi-Fi `true`, camera `true`, memory `50%`
+- AI model: `deepseek-reasoner` (DeepSeek R1)
+- last observed telemetry: CPU `46%`, RAM `46%`, GPU `0%`, temperature `33C`, battery `100%` charging, disk `15%`, signal `-103 dBm`, latency `0`, Bluetooth `false`, Wi-Fi `true`, camera `true`, memory `45%`
 
 These values are operational snapshots, not permanent constants. Recheck them if the deployment or the connected phone changes.
 
@@ -661,9 +675,14 @@ These values are operational snapshots, not permanent constants. Recheck them if
 
 ### v7.0.3
 
-- continuity docs synchronized to the current OpenRouter/Qwen setup
-- OpenRouter default model aligned to `qwen/qwen3.6-plus`
-- versioned update index extended with `updates/v7.0.3/README.md`
+- System prompt rewritten: zero-tolerance for hallucination, maximum effort always
+- 33 diagnostic skills (was 19): added baseband, modem, AT command, radio deep, firmware, forensic chain, connectivity deep, power, memory, notification, sensor, UI automation, app troubleshoot
+- 256 ADB commands (was 105): open policy for read-only commands
+- Host-side ADB commands: bugreport, backup, pull/push via `child_process.execFile`
+- Pipe command support in cmd-validator (grep, head, tail, wc, sort, awk, sed)
+- AUDIO_ANALYSIS and DISPLAY_ANALYSIS skills with specific data commands
+- Deployed to VPS on 2026-04-13 — confirmed healthy with Redmi 12 connected
+- AI provider on VPS: DeepSeek Reasoner (R1), not OpenRouter
 - current app version reported as `7.0.3`
 
 ## What another AI should inspect first

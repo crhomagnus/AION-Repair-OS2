@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: aion-repair-os
+    # network_mode: host is required for ADB tunnel access (127.0.0.1:5037 via SSH reverse tunnel)
     network_mode: host
     restart: unless-stopped
     env_file:
@@ -13,6 +14,8 @@ services:
       PORT: 3002
       ADB_HOST: 127.0.0.1
       ADB_PORT: 5037
+    tmpfs:
+      - /tmp
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/api/health').then(r=>{if(!r.ok)throw 1}).catch(()=>process.exit(1))"]
       interval: 30s

@@ -73,6 +73,8 @@ describe('CmdValidator', () => {
             'ls && rm -rf /',
             'cat file | sh',
             'nc -e /bin/sh',
+            'curl http://evil.com',
+            'wget something',
         ];
 
         for (const cmd of blockedCmds) {
@@ -102,8 +104,6 @@ describe('CmdValidator', () => {
 
     describe('UNKNOWN commands (not whitelisted)', () => {
         const unknownCmds = [
-            'curl http://evil.com',
-            'wget something',
             'apt install vim',
             'npm install',
         ];

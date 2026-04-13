@@ -21,8 +21,8 @@ class AiAgent {
                 'HTTP-Referer': process.env.OPENROUTER_REFERER || 'http://localhost:3001',
                 'X-Title': process.env.OPENROUTER_APP_NAME || 'AION Repair OS'
             };
-        this.history = [];
-        
+        this.histories = new Map();
+
         this.systemPrompt = `Você é AION, o agente técnico principal do AION Repair OS.
 
 Sua função é conversar com clientes de forma natural, elegante e objetiva, como um assistente técnico altamente competente, no estilo de um “Jarvis” para diagnóstico e reparo de smartphones Android. Você não é um chatbot genérico de atendimento. Você é um especialista calmo, preciso, humano e seguro.
@@ -114,21 +114,30 @@ Cliente: “me fala tudo do aparelho”
 Você deve agir sempre como um especialista real acompanhando um aparelho real, com presença calma, domínio técnico e comunicação limpa.`;
     }
 
+    _getHistory(sessionId) {
+        const sid = sessionId || '_default';
+        if (!this.histories.has(sid)) this.histories.set(sid, []);
+        return this.histories.get(sid);
+    }
+
     async chat(message, sensorData, context = {}) {
+        const sessionId = context.sessionId || null;
+        const history = this._getHistory(sessionId);
+
         // Manter no máximo 6 mensagens no histórico (3 turnos)
-        if (this.history.length > 6) {
-            this.history = this.history.slice(-6);
+        if (history.length > 6) {
+            history.splice(0, history.length - 6);
         }
 
-        this.history.push({ role: 'user', content: message });
+        history.push({ role: 'user', content: message });
 
         if (!this.apiKey) {
             throw new Error('AI provider not configured');
         }
 
         try {
-            const response = await this._callAIProvider(message, sensorData, context);
-            this.history.push({ role: 'assistant', content: response });
+            const response = await this._callAIProvider(message, sensorData, context, history);
+            history.push({ role: 'assistant', content: response });
             return { success: true, response, model: this.model };
         } catch (err) {
             const errorMsg = err.message || 'Unknown error';
@@ -187,9 +196,9 @@ Você deve agir sempre como um especialista real acompanhando um aparelho real, 
         return this.provider || this._detectProvider();
     }
 
-    async _callAIProvider(message, sensorData, context = {}) {
+    async _callAIProvider(message, sensorData, context = {}, history = []) {
         let systemContent = this.systemPrompt;
-        const vocabularyLevel = this._inferVocabularyLevel(message, context);
+        const vocabularyLevel = this._inferVocabularyLevel(message, context, history);
         systemContent += this._vocabularyContext(vocabularyLevel);
 
         // Injeta perfil real do dispositivo se disponível
@@ -212,7 +221,7 @@ Você deve agir sempre como um especialista real acompanhando um aparelho real, 
 
         const messages = [
             { role: 'system', content: systemContent },
-            ...this.history.slice(-4)
+            ...history.slice(-4)
         ];
 
         const body = {
@@ -301,12 +310,12 @@ Sinal Celular: ${s.signal} dBm
 Wi-Fi: ${s.wifi ? 'Conectado' : 'Desconectado'} | Bluetooth: ${s.bluetooth ? 'Ativo' : 'Inativo'} | Câmera: ${s.camera ? 'Disponível' : 'Indisponível'}`;
     }
 
-    _inferVocabularyLevel(message, context = {}) {
+    _inferVocabularyLevel(message, context = {}, history = []) {
         const explicit = (context.userVocabulary || context.languageLevel || context.audienceLevel || '').trim().toLowerCase();
         if (['tecnico', 'técnico', 'advanced', 'avancado', 'avançado'].includes(explicit)) return 'tecnico';
         if (['leigo', 'simples', 'iniciante', 'basic', 'básico'].includes(explicit)) return 'leigo';
 
-        const recentUserText = this.history
+        const recentUserText = history
             .filter((entry) => entry.role === 'user')
             .slice(-3)
             .map((entry) => entry.content || '')
@@ -408,7 +417,11 @@ Wi-Fi: ${s.wifi ? 'Conectado' : 'Desconectado'} | Bluetooth: ${s.bluetooth ? 'At
                 'X-Title': process.env.OPENROUTER_APP_NAME || 'AION Repair OS'
             };
     }
-    clearHistory() { this.history = []; }
+    clearSessionHistory(sessionId) {
+        if (sessionId) this.histories.delete(sessionId);
+    }
+
+    clearHistory() { this.histories.clear(); }
 }
 
 module.exports = AiAgent;

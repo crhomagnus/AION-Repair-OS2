@@ -912,15 +912,78 @@ const state = {
         camera: false,
         memory: 0
     },
-    auditSeen: new Set()
+    auditSeen: new Set(),
+    apiToken: localStorage.getItem('aion_token') || null
 };
+
+function getAuthHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    if (state.apiToken) headers['X-API-Token'] = state.apiToken;
+    return headers;
+}
+
+function showAuthModal() {
+    let modal = document.getElementById('auth-modal');
+    if (modal) { modal.style.display = 'flex'; return; }
+    modal = document.createElement('div');
+    modal.id = 'auth-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85)';
+    modal.innerHTML = `
+        <div style="background:var(--surface-strong);border:1px solid var(--line);border-radius:16px;padding:32px;max-width:400px;width:90%">
+            <h2 style="margin:0 0 8px;font-size:18px;color:var(--accent)">AION Repair OS</h2>
+            <p style="margin:0 0 20px;color:var(--muted);font-size:14px">Insira o token de acesso para continuar.</p>
+            <input id="auth-token-input" type="password" placeholder="Token de acesso"
+                style="width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-family:JetBrains Mono;font-size:14px;outline:none"/>
+            <button id="auth-token-btn"
+                style="width:100%;margin-top:12px;padding:12px;border:none;border-radius:8px;background:var(--accent);color:var(--bg);font-weight:600;cursor:pointer;font-size:14px">
+                Entrar</button>
+            <p id="auth-error" style="margin:8px 0 0;color:var(--danger);font-size:12px;display:none">Token inválido.</p>
+        </div>`;
+    document.body.appendChild(modal);
+    const input = document.getElementById('auth-token-input');
+    const btn = document.getElementById('auth-token-btn');
+    const errEl = document.getElementById('auth-error');
+    async function tryAuth() {
+        const token = input.value.trim();
+        if (!token) return;
+        try {
+            const res = await fetch('/api/status', { headers: { 'X-API-Token': token } });
+            if (res.ok) {
+                state.apiToken = token;
+                localStorage.setItem('aion_token', token);
+                modal.style.display = 'none';
+                bootApp();
+            } else {
+                errEl.style.display = 'block';
+            }
+        } catch { errEl.style.display = 'block'; }
+    }
+    btn.addEventListener('click', tryAuth);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryAuth(); });
+    input.focus();
+}
 
 const sensorNodes = new Map();
 const auditLimit = 80;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     renderSensorSkeleton();
     wireDeviceFrame();
+    document.getElementById('chat-form').addEventListener('submit', handleChatSubmit);
+
+    // Check if auth is required
+    const healthRes = await fetch('/api/status', {
+        headers: state.apiToken ? { 'X-API-Token': state.apiToken } : {}
+    }).catch(() => null);
+
+    if (healthRes && healthRes.status === 401) {
+        showAuthModal();
+    } else {
+        bootApp();
+    }
+});
+
+function bootApp() {
     appendActivity('SYSTEM', 'Sistema iniciado', 'Aguardando dispositivo ADB ou sessão ativa.');
     appendChat('SYSTEM', 'O agente está pronto. Conecte o telefone ou envie uma mensagem.', 'system');
     connectWebSocket();
@@ -928,9 +991,8 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshAudit();
     state.devicePollTimer = setInterval(refreshDevices, 3000);
     state.auditPollTimer = setInterval(refreshAudit, 4000);
-    document.getElementById('chat-form').addEventListener('submit', handleChatSubmit);
     document.getElementById('chat-input').focus();
-});
+}
 
 function wireDeviceFrame() {
     const image = document.getElementById('device-image');
@@ -983,7 +1045,10 @@ function connectWebSocket() {
     }
 
     const scheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    state.ws = new WebSocket(`${scheme}//${location.host}`);
+    const wsUrl = state.apiToken
+        ? `${scheme}//${location.host}?token=${encodeURIComponent(state.apiToken)}`
+        : `${scheme}//${location.host}`;
+    state.ws = new WebSocket(wsUrl);
 
     state.ws.addEventListener('open', () => {
         appendActivity('SYSTEM', 'WebSocket conectado', 'Fluxo de telemetria e eventos em tempo real habilitado.');
@@ -1123,7 +1188,7 @@ async function refreshDevices() {
 async function connectDevice(deviceId) {
     const response = await fetch('/api/connect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ deviceId })
     });
 
@@ -1139,7 +1204,7 @@ async function connectDevice(deviceId) {
 async function createSession(deviceId) {
     const response = await fetch('/api/sessions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
             channel: 'web',
             device_station_id: deviceId,
@@ -1205,7 +1270,7 @@ async function handleChatSubmit(event) {
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify({
                 message,
                 sessionId: state.sessionId,
@@ -1261,7 +1326,7 @@ async function confirmPendingAction() {
         try {
             await fetch(`/api/sessions/${state.sessionId}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ mode: 'forensic' })
             });
             state.sessionMode = 'forensic';
@@ -1287,7 +1352,7 @@ async function performAction(command, risk) {
     try {
         const response = await fetch('/api/execute', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify({
                 command,
                 sessionId: state.sessionId
@@ -1645,7 +1710,11 @@ function formatTime(value) {
 
 async function fetchJson(url, fallback = null, options = {}) {
     try {
+        if (state.apiToken) {
+            options.headers = { ...options.headers, 'X-API-Token': state.apiToken };
+        }
         const response = await fetch(url, options);
+        if (response.status === 401) { showAuthModal(); return fallback; }
         const data = await response.json();
         if (!response.ok) throw new Error(data?.error || 'Request failed');
         return data;

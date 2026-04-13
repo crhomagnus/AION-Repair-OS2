@@ -31,6 +31,7 @@ class AIONServer {
         this.port = Number(process.env.PORT) || 3001;
         this.host = process.env.HOST || '127.0.0.1';
         this.adminToken = process.env.ADMIN_TOKEN || null;
+        this.apiToken = process.env.API_TOKEN || null;
         this.corsOrigin = process.env.CORS_ORIGIN || null;
 
         this.captureJobs = new Map();
@@ -41,16 +42,43 @@ class AIONServer {
         this._rateLimitWindow = Number(process.env.RATE_LIMIT_WINDOW || 60000);
         this._rateLimitMax = Number(process.env.RATE_LIMIT_MAX || 30);
 
+        // Rate limiter cleanup — prevent unbounded Map growth
+        this._rateLimitCleanup = setInterval(() => {
+            const now = Date.now();
+            for (const [key, entry] of this._rateLimits) {
+                if (now - entry.windowStart > this._rateLimitWindow * 2) {
+                    this._rateLimits.delete(key);
+                }
+            }
+        }, this._rateLimitWindow);
+
+        // Startup security validation
+        if (process.env.NODE_ENV === 'production') {
+            if (!this.adminToken) log.warn('ADMIN_TOKEN not set — admin endpoints are unprotected');
+            if (!this.apiToken) log.warn('API_TOKEN not set — all endpoints are open without authentication');
+        }
+
         this._setupRoutes();
         this._setupWS();
         this._startTelemetry();
         this._startDeviceTracking();
     }
 
+    _requireAuth(req, res, next) {
+        if (!this.apiToken) return next();
+        const token = req.headers['authorization']?.replace('Bearer ', '')
+                    || req.headers['x-api-token'];
+        if (token !== this.apiToken) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        next();
+    }
+
     _requireAdmin(req, res, next) {
         if (!this.adminToken) return next();
-        const token = req.headers['x-admin-token'] || req.query.admin_token;
+        const token = req.headers['x-admin-token'];
         if (token !== this.adminToken) {
+            log.warn('Admin auth failed', { ip: req.ip });
             return res.status(401).json({ error: 'Unauthorized' });
         }
         next();
@@ -75,10 +103,10 @@ class AIONServer {
     _setupRoutes() {
         // CORS
         this.app.use((req, res, next) => {
-            const origin = this.corsOrigin || req.headers.origin || '*';
-            res.setHeader('Access-Control-Allow-Origin', this.corsOrigin || '*');
+            const allowed = this.corsOrigin || req.headers.origin || `http://localhost:${this.port}`;
+            res.setHeader('Access-Control-Allow-Origin', allowed);
             res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Token');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Token, X-API-Token, Authorization');
             if (req.method === 'OPTIONS') return res.status(204).end();
             next();
         });
@@ -100,6 +128,12 @@ class AIONServer {
         }));
         this.app.use(express.json({ limit: '1mb' }));
 
+        // Auth middleware — applies to all /api/* except /api/health
+        this.app.use('/api', (req, res, next) => {
+            if (req.path === '/health') return next();
+            this._requireAuth(req, res, next);
+        });
+
         // === HEALTH CHECK ===
         this.app.get('/api/health', (req, res) => {
             const adbOk = this.adb.isConnected();
@@ -117,11 +151,17 @@ class AIONServer {
         });
 
         // === SESSION MANAGEMENT (PRD) ===
-        this.app.post('/api/sessions', async (req, res) => {
+        const VALID_MODES = ['diagnostic', 'repair', 'forensic'];
+        const VALID_STATUSES = ['open', 'closed', 'paused'];
+
+        this.app.post('/api/sessions', (req, res, next) => this._rateLimit('sessions', req, res, next), async (req, res) => {
             const { channel, device_station_id, mode, consent } = req.body;
-            
+
             if (!device_station_id) {
                 return res.status(400).json({ error: 'device_station_id required' });
+            }
+            if (mode && !VALID_MODES.includes(mode)) {
+                return res.status(400).json({ error: `Invalid mode. Valid: ${VALID_MODES.join(', ')}` });
             }
 
             const sessionId = 'session_' + crypto.randomUUID();
@@ -161,11 +201,23 @@ class AIONServer {
         this.app.patch('/api/sessions/:id', (req, res) => {
             const session = this.store.getSession(req.params.id);
             if (!session) return res.status(404).json({ error: 'Session not found' });
-            
+
+            if (req.body.mode && !VALID_MODES.includes(req.body.mode)) {
+                return res.status(400).json({ error: `Invalid mode. Valid: ${VALID_MODES.join(', ')}` });
+            }
+            if (req.body.status && !VALID_STATUSES.includes(req.body.status)) {
+                return res.status(400).json({ error: `Invalid status. Valid: ${VALID_STATUSES.join(', ')}` });
+            }
+
             if (req.body.status) session.status = req.body.status;
             if (req.body.mode) session.mode = req.body.mode;
             session.updated_at = new Date().toISOString();
-            
+
+            // Cleanup AI history when session closes
+            if (session.status === 'closed') {
+                this.ai.clearSessionHistory(req.params.id);
+            }
+
             res.json(session);
         });
 
@@ -191,13 +243,13 @@ class AIONServer {
 
         this.app.get('/api/devices', async (req, res) => {
             try { res.json(await this.adb.listDevices()); }
-            catch (err) { res.status(500).json({ error: err.message }); }
+            catch (err) { log.error('Device list failed', { error: err.message }); res.status(500).json({ error: 'Failed to list devices' }); }
         });
 
         // Connection diagnostics — shows all devices including problematic ones
         this.app.get('/api/devices/diagnose', async (req, res) => {
             try { res.json(await this.adb.diagnose()); }
-            catch (err) { res.status(500).json({ error: err.message }); }
+            catch (err) { log.error('Diagnose failed', { error: err.message }); res.status(500).json({ error: 'Diagnostic failed' }); }
         });
 
         // Connection status with pending devices info
@@ -205,7 +257,7 @@ class AIONServer {
             res.json(this.adb.getConnectionStatus());
         });
 
-        this.app.post('/api/connect', async (req, res) => {
+        this.app.post('/api/connect', (req, res, next) => this._rateLimit('connect', req, res, next), async (req, res) => {
             const { deviceId } = req.body;
             if (!deviceId) return res.status(400).json({ error: 'deviceId required' });
             try {
@@ -213,11 +265,11 @@ class AIONServer {
                 await this.sensors.start();
                 this.broadcast({ type: 'device_connected', device: info });
                 res.json({ success: true, device: info });
-            } catch (err) { res.status(500).json({ error: err.message }); }
+            } catch (err) { log.error('Connect failed', { error: err.message }); res.status(500).json({ error: 'Failed to connect device' }); }
         });
 
         // === TYPED ACTION API (PRD) ===
-        this.app.post('/api/actions/dispatch', async (req, res) => {
+        this.app.post('/api/actions/dispatch', (req, res, next) => this._rateLimit('dispatch', req, res, next), async (req, res) => {
             const { session_id, action_type, payload } = req.body;
             
             if (!action_type) {
@@ -240,12 +292,12 @@ class AIONServer {
             // Log action
             this._logAction(session_id, action_type, payload, riskLevel);
 
-            this.broadcast({ 
-                type: 'action_executed', 
-                action_type, 
+            this.broadcast({
+                type: 'action_executed',
+                action_type,
                 riskLevel,
-                result 
-            });
+                result
+            }, session_id);
 
             res.json({ 
                 accepted: true, 
@@ -293,15 +345,16 @@ class AIONServer {
 
                 const result = await this.adb.execute(command);
                 this._logAction(sessionId, 'EXECUTE', { command, risk: validation.risk }, validation.risk);
-                this.broadcast({ type: 'adb_log', command, result, risk: validation.risk });
+                this.broadcast({ type: 'adb_log', command, result, risk: validation.risk }, sessionId);
                 res.json({ success: true, result, risk: validation.risk });
-            } catch (err) { res.status(500).json({ error: err.message }); }
+            } catch (err) { log.error('Execute failed', { command, error: err.message }); res.status(500).json({ error: 'Command execution failed' }); }
         });
 
         // === CHAT WITH AGENTIC AI ===
         this.app.post('/api/chat', (req, res, next) => this._rateLimit('chat', req, res, next), async (req, res) => {
             const { message, sessionId, context } = req.body;
             if (!message) return res.status(400).json({ error: 'message required' });
+            if (message.length > 2000) return res.status(400).json({ error: 'message too long (max 2000 chars)' });
             
             try {
                 const sensorData = this.sensors.getState();
@@ -309,17 +362,18 @@ class AIONServer {
                 
                 const result = await this.ai.chat(message, sensorData, {
                     session,
+                    sessionId,
                     mode: context?.mode || 'diagnostic',
                     device: context?.device || this.adb.deviceInfo || null
                 });
 
-                this.broadcast({ type: 'chat_response', ...result });
+                this.broadcast({ type: 'chat_response', ...result }, sessionId);
                 res.json({
                     ...result,
                     sessionId,
                     actions: result.suggestedActions || []
                 });
-            } catch (err) { res.status(500).json({ error: err.message }); }
+            } catch (err) { log.error('Chat failed', { error: err.message }); res.status(500).json({ error: err.message }); }
         });
 
         // === AI CONFIG ===
@@ -349,7 +403,7 @@ class AIONServer {
 
         // === AUDIT LOG ===
         this.app.get('/api/audit', (req, res) => {
-            const limit = parseInt(req.query.limit) || 100;
+            const limit = Math.min(parseInt(req.query.limit) || 100, 500);
             res.json(this.store.getRecentAudit(limit));
         });
 
@@ -358,7 +412,7 @@ class AIONServer {
         });
 
         // === FORENSIC CAPTURE ===
-        this.app.post('/api/capture/forensic', async (req, res) => {
+        this.app.post('/api/capture/forensic', (req, res, next) => this._rateLimit('capture', req, res, next), async (req, res) => {
             if (!this.adb.isConnected()) return res.status(400).json({ error: 'No device connected' });
             try {
                 const { type, sessionId } = req.body || {};
@@ -417,6 +471,16 @@ class AIONServer {
 
     _setupWS() {
         this.wss.on('connection', (ws, req) => {
+            // WebSocket authentication
+            if (this.apiToken) {
+                const url = new URL(req.url, 'http://localhost');
+                const token = url.searchParams.get('token');
+                if (token !== this.apiToken) {
+                    ws.close(1008, 'Unauthorized');
+                    return;
+                }
+            }
+
             // Rate limit WebSocket connections per IP
             const ip = req.socket.remoteAddress;
             const wsConns = [...this.clients].filter(c => c._aionIp === ip).length;
@@ -427,6 +491,9 @@ class AIONServer {
             ws._aionIp = ip;
 
             this.clients.add(ws);
+            ws._aionSessionId = null;
+            ws._msgCount = 0;
+            ws._msgWindowStart = Date.now();
             ws.send(JSON.stringify({
                 type: 'connected',
                 mode: this.ai.apiKey ? 'ONLINE' : 'AI_UNAVAILABLE',
@@ -435,6 +502,17 @@ class AIONServer {
 
             ws.on('message', async (raw) => {
                 try {
+                    // WebSocket rate limiting: 20 msgs per 10 seconds
+                    const now = Date.now();
+                    if (now - ws._msgWindowStart > 10000) {
+                        ws._msgCount = 0;
+                        ws._msgWindowStart = now;
+                    }
+                    ws._msgCount++;
+                    if (ws._msgCount > 20) {
+                        ws.close(1008, 'Rate limit exceeded');
+                        return;
+                    }
                     if (raw.length > 65536) {
                         ws.send(JSON.stringify({ type: 'error', message: 'Message too large' }));
                         return;
@@ -449,9 +527,15 @@ class AIONServer {
     }
 
     async _handleWS(ws, data) {
+        // Track session for broadcast filtering
+        if (data.sessionId && !ws._aionSessionId) {
+            ws._aionSessionId = data.sessionId;
+        }
+
         switch (data.type) {
             case 'chat': {
                 const result = await this.ai.chat(data.message, this.sensors.getState(), {
+                    sessionId: data.sessionId || ws._aionSessionId,
                     device: this.adb.deviceInfo || null
                 });
                 ws.send(JSON.stringify({ type: 'chat_response', ...result }));
@@ -509,10 +593,14 @@ class AIONServer {
         this.adb.startTracking();
     }
 
-    broadcast(msg) {
+    broadcast(msg, sessionId = null) {
         const payload = JSON.stringify(msg);
+        const isGlobal = !sessionId || ['telemetry', 'device_connected', 'device_disconnected', 'device_issue'].includes(msg.type);
         for (const client of this.clients) {
-            if (client.readyState === WebSocket.OPEN) client.send(payload);
+            if (client.readyState !== WebSocket.OPEN) continue;
+            if (isGlobal || client._aionSessionId === sessionId) {
+                client.send(payload);
+            }
         }
     }
 
@@ -538,7 +626,12 @@ class AIONServer {
             'CAPTURE_SCREENSHOT': () => this.adb.execute('screencap -p /sdcard/aion_screen.png'),
             'GET_PROCESSES': () => this.adb.execute('ps -A'),
             'GET_DISK': () => this.adb.execute('df -h'),
-            'SHELL_SAFE': () => payload?.command ? this.adb.execute(payload.command) : Promise.reject(new Error('No command'))
+            'SHELL_SAFE': () => {
+                if (!payload?.command) return Promise.reject(new Error('No command'));
+                const v = this.validator.validateWithRisk(payload.command);
+                if (!v.allowed) return Promise.reject(new Error(`Command blocked: ${v.reason}`));
+                return this.adb.execute(payload.command);
+            }
         };
 
         const handler = actionMap[actionType];
@@ -688,6 +781,7 @@ class AIONServer {
         // Graceful shutdown
         const shutdown = (signal) => {
             log.info(`Received ${signal}, shutting down gracefully...`);
+            clearInterval(this._rateLimitCleanup);
             this.adb.stopTracking();
             this.sensors.stop();
 

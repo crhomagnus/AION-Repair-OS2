@@ -42,16 +42,18 @@ class CmdValidator {
             'busybox rm -rf', 'busybox dd'
         ];
 
-        // BLOCKED - Never allowed
+        // BLOCKED - Never allowed (regex patterns)
         this.blocked = [
             /^rm\s+-rf\s+\//, /^rm\s+-rf\s+system/, /^rm\s+-rf\s+data/,
             /^dd\s+/, /^mkfs/, /^fdisk/, /^sfdisk/,
             /^reboot\s+-f$/, /^shutdown/, /sysrq\s+[oebsu]/,
-            /:.*\|.*sh$/, /;\s*rm\s+/, /\$\(/, /`.*`/,
-            /&&\s*rm/, /\|\s*sh$/, /busybox\s+rm.*rf/,
+            /:.*\|.*sh$/, /;\s*rm\s+/, /\$\(/, /`[^`]*`/,
+            /&&\s*rm/, /\|\s*sh\s*$/, /\|\s*bash\s*$/, /\|\s*\/bin\/sh/,
+            /busybox\s+rm.*rf/,
             /nc\s+-e/, /\/dev\/null/, /\|\s*sh\s*$/,
-            /eval\s+\(/, /exec\s+/, /;\s*sh\s*$/,
-            /2>&1/, /&\s*$/, /\|\s*grep.*-i.*pass/
+            /eval\s+/, /exec\s+/, /;\s*sh\s*$/,
+            /2>&1/, /&\s*$/, /\|\s*grep.*-i.*pass/,
+            /^wget\s/, /^curl\s/
         ];
 
         this.dangerous = [
@@ -59,6 +61,10 @@ class CmdValidator {
             /sys\/kernel\/debug\//, /proc\/kcore/,
             /\/system\/app\//, /\/data\/app\/.*\/lib/
         ];
+    }
+
+    _matchesPrefix(command, pattern) {
+        return command === pattern || command.startsWith(pattern + ' ');
     }
 
     validate(cmd) {
@@ -70,14 +76,17 @@ class CmdValidator {
             return { allowed: false, risk: 'UNKNOWN', reason: 'Invalid command' };
         }
 
-        const t = cmd.trim();
+        // Normalize: trim, collapse whitespace, lowercase for matching
+        const t = cmd.trim().replace(/\s+/g, ' ');
         if (!t || t.length > 1000) {
             return { allowed: false, risk: 'UNKNOWN', reason: 'Command too long or empty' };
         }
 
-        // Check blocked patterns
+        const tLower = t.toLowerCase();
+
+        // Check blocked patterns first
         for (const p of this.blocked) {
-            if (p.test(t)) {
+            if (p.test(t) || p.test(tLower)) {
                 return { allowed: false, risk: 'BLOCKED', reason: 'Command matches blocked pattern' };
             }
         }
@@ -89,23 +98,23 @@ class CmdValidator {
             }
         }
 
-        // Check HIGH risk first
+        // Check HIGH risk — prefix match with word boundary
         for (const pattern of this.highRisk) {
-            if (t.toLowerCase().includes(pattern.toLowerCase())) {
+            if (this._matchesPrefix(tLower, pattern.toLowerCase())) {
                 return { allowed: true, risk: 'HIGH', reason: 'Requires FORENSIC mode + confirmation' };
             }
         }
 
-        // Check MEDIUM risk
+        // Check MEDIUM risk — prefix match with word boundary
         for (const pattern of this.mediumRisk) {
-            if (t.startsWith(pattern) || t.toLowerCase().startsWith(pattern.toLowerCase())) {
+            if (this._matchesPrefix(tLower, pattern.toLowerCase())) {
                 return { allowed: true, risk: 'MEDIUM', reason: 'Requires REPAIR mode' };
             }
         }
 
-        // Check LOW risk
+        // Check LOW risk — prefix match with word boundary
         for (const pattern of this.lowRisk) {
-            if (t.startsWith(pattern) || t.toLowerCase().startsWith(pattern.toLowerCase())) {
+            if (this._matchesPrefix(tLower, pattern.toLowerCase())) {
                 return { allowed: true, risk: 'LOW', reason: 'Safe diagnostic command' };
             }
         }

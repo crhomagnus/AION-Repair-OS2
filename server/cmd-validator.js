@@ -131,6 +131,14 @@ class CmdValidator {
 
             // === Window manager ===
             'wm size', 'wm density',
+            'settings get system screen_brightness',
+            'settings get system screen_brightness_mode',
+            'settings get system screen_off_timeout',
+            'settings get system volume_music',
+            'settings get system volume_ring',
+            'settings get system volume_alarm',
+            'settings get system volume_notification',
+            'settings get global mode_ringer',
 
             // === Piped commands (read-only, grep filtering) ===
             'dumpsys window | grep mCurrentFocus',

@@ -209,10 +209,14 @@ const SKILL_DEFINITIONS = {
 
     // ===== DISPLAY & UI =====
     DISPLAY_ANALYSIS: {
-        description: 'Analise de display (resolucao, densidade, GPU, framerate)',
+        description: 'Analise de display (resolucao, densidade, GPU, framerate, brilho)',
         commands: [
+            { key: 'screen_size', cmd: 'wm size' },
+            { key: 'screen_density', cmd: 'wm density' },
+            { key: 'brightness', cmd: 'settings get system screen_brightness' },
+            { key: 'brightness_mode', cmd: 'settings get system screen_brightness_mode' },
+            { key: 'screen_timeout', cmd: 'settings get system screen_off_timeout' },
             { key: 'display', cmd: 'dumpsys display' },
-            { key: 'window', cmd: 'dumpsys window' },
             { key: 'gfxinfo', cmd: 'dumpsys gfxinfo' },
             { key: 'surfaceflinger', cmd: 'dumpsys SurfaceFlinger' }
         ]
@@ -220,10 +224,15 @@ const SKILL_DEFINITIONS = {
 
     // ===== AUDIO =====
     AUDIO_ANALYSIS: {
-        description: 'Diagnostico de audio (volumes, rotas, dispositivos, codecs)',
+        description: 'Diagnostico de audio (volumes, rotas, dispositivos, mudo, bluetooth audio)',
         commands: [
             { key: 'audio', cmd: 'dumpsys audio' },
-            { key: 'audio_flinger', cmd: 'dumpsys media.audio_flinger' }
+            { key: 'audio_flinger', cmd: 'dumpsys media.audio_flinger' },
+            { key: 'vol_music', cmd: 'settings get system volume_music' },
+            { key: 'vol_ring', cmd: 'settings get system volume_ring' },
+            { key: 'vol_alarm', cmd: 'settings get system volume_alarm' },
+            { key: 'vol_notification', cmd: 'settings get system volume_notification' },
+            { key: 'mode_ringer', cmd: 'settings get global mode_ringer' }
         ]
     },
 
@@ -715,20 +724,31 @@ class SkillRunner {
                 break;
             }
             case 'DISPLAY_ANALYSIS': {
-                if (details.display) {
+                if (details.screen_size) parts.push(`Tela: ${details.screen_size.replace('Physical size: ', '').trim()}`);
+                if (details.screen_density) parts.push(`Densidade: ${details.screen_density.replace('Physical density: ', '').trim()}`);
+                if (details.brightness) parts.push(`Brilho: ${details.brightness.trim()}/255`);
+                if (details.brightness_mode) parts.push(details.brightness_mode.trim() === '1' ? 'Brilho auto' : 'Brilho manual');
+                if (details.screen_timeout) {
+                    const ms = parseInt(details.screen_timeout);
+                    if (ms) parts.push(`Timeout: ${Math.round(ms/1000)}s`);
+                }
+                if (!details.screen_size && details.display) {
                     const res = details.display.match(/(\d+)\s*x\s*(\d+)/);
                     if (res) parts.push(`Resolucao: ${res[1]}x${res[2]}`);
-                    const dpi = details.display.match(/(\d+)\s*dpi/);
-                    if (dpi) parts.push(`${dpi[1]} DPI`);
                 }
                 break;
             }
             case 'AUDIO_ANALYSIS': {
+                if (details.vol_music) parts.push(`Vol musica: ${details.vol_music.trim()}`);
+                if (details.vol_ring) parts.push(`Vol toque: ${details.vol_ring.trim()}`);
+                if (details.vol_alarm) parts.push(`Vol alarme: ${details.vol_alarm.trim()}`);
+                if (details.mode_ringer) {
+                    const modes = { '0': 'Normal', '1': 'Silencioso', '2': 'Vibrar' };
+                    parts.push(`Modo: ${modes[details.mode_ringer.trim()] || details.mode_ringer.trim()}`);
+                }
                 if (details.audio) {
-                    const vol = details.audio.match(/STREAM_MUSIC.*?index=(\d+)/s);
-                    if (vol) parts.push(`Volume musica: ${vol[1]}`);
-                    const route = details.audio.match(/Selected Output.*?(\w+)/s);
-                    if (route) parts.push(`Saida: ${route[1]}`);
+                    const route = details.audio.match(/Devices:\s*(\S+)/);
+                    if (route) parts.push(`Dispositivo: ${route[1]}`);
                 }
                 break;
             }

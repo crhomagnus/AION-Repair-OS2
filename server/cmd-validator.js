@@ -127,7 +127,31 @@ class CmdValidator {
             'dumpsys location',
 
             // === Settings system ===
-            'settings list system'
+            'settings list system',
+
+            // === Window manager ===
+            'wm size', 'wm density',
+
+            // === Piped commands (read-only, grep filtering) ===
+            'dumpsys window | grep mCurrentFocus',
+            'dumpsys window | grep mRotation',
+            'dumpsys activity activities | grep mResumedActivity',
+            'dumpsys activity activities | grep -E',
+            'dumpsys input | grep -A2',
+            'dumpsys input_method | grep mCurMethodId',
+            'dumpsys power | grep mScreenOn',
+            'dumpsys meminfo --compact',
+            'logcat -d -b events -t 200 | grep am_proc_died',
+            'logcat -d -t 200 | grep -i'
+        ];
+
+        // Pipe-safe patterns: commands with | that are read-only grep filters
+        this.safePipePatterns = [
+            /^dumpsys\s+\w+.*\|\s*grep\s/,
+            /^logcat\s+-d.*\|\s*grep\s/,
+            /^pm\s+list\s.*\|\s*grep\s/,
+            /^ps\s.*\|\s*grep\s/,
+            /^cat\s+\/proc\/.*\|\s*grep\s/,
         ];
 
         // MEDIUM RISK - Write operations, requires REPAIR mode
@@ -237,8 +261,13 @@ class CmdValidator {
 
         const tLower = t.toLowerCase();
 
-        // Check blocked patterns first
+        // Check if command matches safe pipe patterns (read-only grep filters)
+        // These bypass the general pipe block in blocked patterns
+        const isSafePipe = t.includes('|') && this.safePipePatterns.some(p => p.test(t));
+
+        // Check blocked patterns first (skip pipe blocks for safe pipes)
         for (const p of this.blocked) {
+            if (isSafePipe && (p.source.includes('\\|') || p.source.includes('pipe'))) continue;
             if (p.test(t) || p.test(tLower)) {
                 return { allowed: false, risk: 'BLOCKED', reason: 'Command matches blocked pattern' };
             }

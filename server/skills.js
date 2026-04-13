@@ -428,6 +428,50 @@ const SKILL_DEFINITIONS = {
             { key: 'operator', cmd: 'getprop gsm.operator.alpha' },
             { key: 'signal', cmd: 'dumpsys telephony.registry' }
         ]
+    },
+
+    // ===== UI AUTOMATION =====
+    UI_AUTOMATION: {
+        description: 'Estado da UI: activity em foco, janelas, input devices, tela ligada, orientacao',
+        commands: [
+            { key: 'current_focus', cmd: 'dumpsys window | grep mCurrentFocus' },
+            { key: 'resumed_activity', cmd: 'dumpsys activity activities | grep mResumedActivity' },
+            { key: 'display_state', cmd: 'dumpsys power | grep mScreenOn' },
+            { key: 'screen_size', cmd: 'wm size' },
+            { key: 'screen_density', cmd: 'wm density' },
+            { key: 'rotation', cmd: 'dumpsys window | grep mRotation' },
+            { key: 'input_devices', cmd: 'dumpsys input | grep -A2 "Input Device"' },
+            { key: 'ime', cmd: 'dumpsys input_method | grep mCurMethodId' }
+        ]
+    },
+
+    // ===== APP TROUBLESHOOT =====
+    APP_TROUBLESHOOT: {
+        description: 'Troubleshoot de app: info do pacote, permissoes, uso de memoria, erros recentes, estado',
+        commands: [
+            { key: 'packages_user', cmd: 'pm list packages -3' },
+            { key: 'running_activities', cmd: 'dumpsys activity activities | grep -E "Run|Top|mResumed"' },
+            { key: 'recent_errors', cmd: 'logcat -d -t 100 *:E' },
+            { key: 'crashes', cmd: 'logcat -d -b crash -t 50' },
+            { key: 'cpuinfo', cmd: 'dumpsys cpuinfo' },
+            { key: 'meminfo_summary', cmd: 'dumpsys meminfo --compact' },
+            { key: 'usagestats', cmd: 'dumpsys usagestats' },
+            { key: 'procstats', cmd: 'dumpsys procstats --hours 1' }
+        ]
+    },
+
+    // ===== MEMORY / HEAP ANALYSIS =====
+    MEMORY_ANALYSIS: {
+        description: 'Analise profunda de memoria: processos top, PSS, swap, zRAM, OOM kills',
+        commands: [
+            { key: 'meminfo', cmd: 'cat /proc/meminfo' },
+            { key: 'meminfo_dump', cmd: 'dumpsys meminfo' },
+            { key: 'procstats', cmd: 'dumpsys procstats --hours 3' },
+            { key: 'vmstat', cmd: 'cat /proc/vmstat' },
+            { key: 'cpuinfo', cmd: 'dumpsys cpuinfo' },
+            { key: 'oom_kills', cmd: 'logcat -d -b events -t 200 | grep am_proc_died' },
+            { key: 'low_memory', cmd: 'logcat -d -t 200 | grep -i "low.memory\\|oom\\|kill"' }
+        ]
     }
 };
 
@@ -822,6 +866,61 @@ class SkillRunner {
                     const lines = details.radio_full.split('\n').filter(l => l.trim()).length;
                     const errors = (details.radio_full.match(/error|fail|reject|denied/gi) || []).length;
                     parts.push(`${lines} linhas radio log, ${errors} erros`);
+                }
+                break;
+            }
+            case 'UI_AUTOMATION': {
+                if (details.current_focus) {
+                    const match = details.current_focus.match(/mCurrentFocus=\S+\s+(\S+)/);
+                    if (match) parts.push(`Foco: ${match[1]}`);
+                }
+                if (details.display_state) {
+                    parts.push(details.display_state.includes('true') ? 'Tela ligada' : 'Tela desligada');
+                }
+                if (details.screen_size) parts.push(`Tela: ${details.screen_size.replace('Physical size: ', '').trim()}`);
+                if (details.rotation) {
+                    const rot = details.rotation.match(/mRotation=(\d)/);
+                    if (rot) parts.push(`Rotacao: ${rot[1] === '0' ? 'Portrait' : 'Landscape'}`);
+                }
+                break;
+            }
+            case 'APP_TROUBLESHOOT': {
+                if (details.packages_user) {
+                    const count = details.packages_user.split('\n').filter(l => l.startsWith('package:')).length;
+                    parts.push(`${count} apps terceiros`);
+                }
+                if (details.crashes) {
+                    const lines = details.crashes.split('\n').filter(l => l.trim()).length;
+                    if (lines > 0) parts.push(`${lines} linhas crash log`);
+                }
+                if (details.recent_errors) {
+                    const fatal = (details.recent_errors.match(/FATAL|ANR/gi) || []).length;
+                    if (fatal) parts.push(`${fatal} erros fatais/ANR`);
+                }
+                if (details.cpuinfo) {
+                    const match = details.cpuinfo.match(/(\d+)% TOTAL/);
+                    if (match) parts.push(`CPU: ${match[1]}%`);
+                }
+                break;
+            }
+            case 'MEMORY_ANALYSIS': {
+                if (details.meminfo) {
+                    const total = details.meminfo.match(/MemTotal:\s+(\d+)/);
+                    const free = details.meminfo.match(/MemAvailable:\s+(\d+)/);
+                    if (total && free) {
+                        const totalMB = Math.round(parseInt(total[1]) / 1024);
+                        const freeMB = Math.round(parseInt(free[1]) / 1024);
+                        const usedPct = Math.round((1 - freeMB / totalMB) * 100);
+                        parts.push(`RAM ${usedPct}% usada (${freeMB}MB livres de ${totalMB}MB)`);
+                    }
+                }
+                if (details.oom_kills) {
+                    const kills = details.oom_kills.split('\n').filter(l => l.trim()).length;
+                    if (kills > 0) parts.push(`${kills} processos mortos por OOM`);
+                }
+                if (details.low_memory) {
+                    const warnings = (details.low_memory.match(/low.memory|oom/gi) || []).length;
+                    if (warnings > 0) parts.push(`${warnings} alertas de memoria baixa`);
                 }
                 break;
             }

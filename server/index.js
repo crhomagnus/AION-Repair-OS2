@@ -635,6 +635,23 @@ class AIONServer {
             'RUN_SKILL': async () => {
                 if (!payload?.skill) throw new Error('No skill specified');
                 return this.ai.skills.execute(payload.skill);
+            },
+            'BUGREPORT': async () => {
+                const path = `/data/local/tmp/bugreport_${Date.now()}.zip`;
+                return this.adb.bugreport(path);
+            },
+            'BACKUP_DEVICE': async () => {
+                const path = `/data/local/tmp/backup_${Date.now()}.ab`;
+                return this.adb.backup(path, { apk: true, shared: true });
+            },
+            'PULL_FILE': async () => {
+                if (!payload?.remote) throw new Error('No remote path specified');
+                const localPath = `/data/local/tmp/pulled_${Date.now()}`;
+                return this.adb.pullFile(payload.remote, localPath);
+            },
+            'PUSH_FILE': async () => {
+                if (!payload?.local || !payload?.remote) throw new Error('Missing local or remote path');
+                return this.adb.pushFile(payload.local, payload.remote);
             }
         };
 

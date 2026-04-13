@@ -5,7 +5,9 @@ const VALID_ACTION_TYPES = [
     'GET_PROPS', 'DUMPSYS_BATTERY', 'DUMPSYS_MEMINFO', 'DUMPSYS_WIFI',
     'LIST_PACKAGES', 'GET_CPU', 'GET_MEMORY', 'GET_TEMP',
     'GET_PROCESSES', 'GET_DISK', 'CAPTURE_SCREENSHOT', 'SHELL_SAFE',
-    'RUN_SKILL'
+    'RUN_SKILL',
+    // Host-side commands
+    'PULL_FILE', 'PUSH_FILE', 'BUGREPORT', 'BACKUP_DEVICE'
 ];
 
 const DEFAULT_DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-reasoner';
@@ -59,12 +61,16 @@ Acoes disponiveis:
 - GET_DISK: uso de armazenamento
 - CAPTURE_SCREENSHOT: captura de tela (risco MEDIO, requer confirmacao)
 - SHELL_SAFE: comando shell customizado. Requer campo “command”. Ex: {“type”:”SHELL_SAFE”,”command”:”dumpsys activity”}
+- PULL_FILE: baixa arquivo do dispositivo. Requer campo “remote” (risco MEDIO)
+- BUGREPORT: gera bugreport completo do Android (risco MEDIO, demora ~2min)
+- BACKUP_DEVICE: backup completo do dispositivo (risco MEDIO, demora ~5min)
 - RUN_SKILL: executa diagnostico composto. Requer campo “skill”.
   Skills disponiveis:
   Core: FULL_DIAGNOSTIC, BATTERY_HEALTH, THERMAL_ANALYSIS, STORAGE_CLEANUP
   Rede: NETWORK_DIAGNOSTIC, WIFI_ANALYSIS, CELLULAR_ANALYSIS, BLUETOOTH_ANALYSIS, CONNECTIVITY_DEEP
-  Performance: PERFORMANCE_PROFILE, PROCESS_ANALYSIS, POWER_ANALYSIS
-  Apps: APP_ANALYSIS, APP_CRASH_LOG, NOTIFICATION_ANALYSIS
+  Performance: PERFORMANCE_PROFILE, PROCESS_ANALYSIS, POWER_ANALYSIS, MEMORY_ANALYSIS
+  Apps: APP_ANALYSIS, APP_CRASH_LOG, APP_TROUBLESHOOT, NOTIFICATION_ANALYSIS
+  UI: UI_AUTOMATION
   Hardware: HARDWARE_PROFILE, DEVICE_IDENTITY, DISPLAY_ANALYSIS, AUDIO_ANALYSIS, SENSOR_ANALYSIS
   Seguranca: SECURITY_CHECK
   Baseband/Modem: BASEBAND_ANALYSIS, MODEM_DIAGNOSTICS, AT_COMMAND_PROBE
@@ -330,6 +336,11 @@ Cliente: “acho que meu celular foi hackeado”
                 } catch (err) {
                     results.push({ type: 'RUN_SKILL', skill: action.skill, result: `Erro na skill: ${err.message}`, error: true });
                 }
+                continue;
+            }
+            // Host-side commands (MEDIUM risk — returned to frontend for confirmation)
+            if (['PULL_FILE', 'PUSH_FILE', 'BUGREPORT', 'BACKUP_DEVICE'].includes(action.type)) {
+                results.push({ type: action.type, result: null, risk: 'MEDIUM', pendingFrontend: true });
                 continue;
             }
             const cmd = this._actionToCommand(action);

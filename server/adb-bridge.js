@@ -451,6 +451,87 @@ class AdbBridge extends EventEmitter {
         }
     }
 
+    // === HOST-SIDE ADB COMMANDS ===
+    // These run `adb` binary on the HOST, not via adb shell on the device
+
+    async executeHostCommand(args, timeoutMs = 30000) {
+        if (!this.deviceId) throw new Error('Nenhum dispositivo conectado');
+        const { execFile } = require('child_process');
+        const fullArgs = ['-s', this.deviceId, ...args];
+
+        return new Promise((resolve, reject) => {
+            const proc = execFile('adb', fullArgs, {
+                timeout: timeoutMs,
+                maxBuffer: 10 * 1024 * 1024 // 10MB for bugreport
+            }, (err, stdout, stderr) => {
+                if (err) {
+                    if (err.killed) reject(new Error('Comando host ADB expirou'));
+                    else reject(new Error(stderr || err.message));
+                } else {
+                    resolve(stdout);
+                }
+            });
+        });
+    }
+
+    async pullFile(remotePath, localPath) {
+        if (!this.deviceId) throw new Error('Nenhum dispositivo conectado');
+        const { execFile } = require('child_process');
+        return new Promise((resolve, reject) => {
+            execFile('adb', ['-s', this.deviceId, 'pull', remotePath, localPath], {
+                timeout: 60000
+            }, (err, stdout, stderr) => {
+                if (err) reject(new Error(stderr || err.message));
+                else resolve(stdout.trim());
+            });
+        });
+    }
+
+    async pushFile(localPath, remotePath) {
+        if (!this.deviceId) throw new Error('Nenhum dispositivo conectado');
+        const { execFile } = require('child_process');
+        return new Promise((resolve, reject) => {
+            execFile('adb', ['-s', this.deviceId, 'push', localPath, remotePath], {
+                timeout: 60000
+            }, (err, stdout, stderr) => {
+                if (err) reject(new Error(stderr || err.message));
+                else resolve(stdout.trim());
+            });
+        });
+    }
+
+    async bugreport(outputPath) {
+        if (!this.deviceId) throw new Error('Nenhum dispositivo conectado');
+        const { execFile } = require('child_process');
+        return new Promise((resolve, reject) => {
+            execFile('adb', ['-s', this.deviceId, 'bugreport', outputPath], {
+                timeout: 300000, // 5min - bugreports are slow
+                maxBuffer: 50 * 1024 * 1024
+            }, (err, stdout, stderr) => {
+                if (err) reject(new Error(stderr || err.message));
+                else resolve(outputPath);
+            });
+        });
+    }
+
+    async backup(outputPath, options = {}) {
+        if (!this.deviceId) throw new Error('Nenhum dispositivo conectado');
+        const { execFile } = require('child_process');
+        const args = ['-s', this.deviceId, 'backup'];
+        if (options.apk) args.push('-apk');
+        if (options.shared) args.push('-shared');
+        args.push('-all', '-f', outputPath);
+
+        return new Promise((resolve, reject) => {
+            execFile('adb', args, {
+                timeout: 600000 // 10min for full backup
+            }, (err, stdout, stderr) => {
+                if (err) reject(new Error(stderr || err.message));
+                else resolve(outputPath);
+            });
+        });
+    }
+
     isConnected() { return !!this.deviceId; }
 
     getConnectionStatus() {

@@ -95,7 +95,39 @@ class CmdValidator {
             'cat /etc/hosts',
             'mount',
             'dumpsys SurfaceFlinger',
-            'dumpsys input_method'
+            'dumpsys input_method',
+
+            // === Baseband/Modem diagnostics ===
+            'getprop gsm.version.baseband',
+            'getprop gsm.version.ril-impl',
+            'getprop persist.radio.modem.version',
+            'getprop gsm.operator.alpha',
+            'getprop gsm.network.type',
+            'getprop gsm.sim.state',
+            'getprop gsm.sim.operator.alpha',
+            'getprop gsm.nitz.time',
+            'getprop rild.libpath', 'getprop rild.libargs',
+
+            // === Firmware diagnostics ===
+            'getprop ro.build.fingerprint',
+            'getprop ro.build.date',
+            'getprop ro.build.type',
+            'getprop ro.build.flavor',
+            'getprop ro.bootloader',
+            'getprop ro.vendor.build.security_patch',
+            'getprop ro.boot.slot_suffix',
+
+            // === AT command / serial port detection ===
+            'ls -la /dev/smd*', 'ls -la /dev/ttyUSB*',
+            'ls -la /dev/ttyACM*', 'ls -la /dev/ttyHS*',
+            'ls -la /dev/diag',
+            'getprop persist.sys.usb.config',
+
+            // === Location/sensors ===
+            'dumpsys location',
+
+            // === Settings system ===
+            'settings list system'
         ];
 
         // MEDIUM RISK - Write operations, requires REPAIR mode

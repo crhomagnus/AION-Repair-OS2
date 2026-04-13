@@ -225,6 +225,209 @@ const SKILL_DEFINITIONS = {
             { key: 'audio', cmd: 'dumpsys audio' },
             { key: 'audio_flinger', cmd: 'dumpsys media.audio_flinger' }
         ]
+    },
+
+    // ===== BASEBAND & MODEM (DeepADB-inspired) =====
+    BASEBAND_ANALYSIS: {
+        description: 'Analise completa de baseband/modem (versao firmware, IMEI, sinal detalhado, celulas vizinhas)',
+        commands: [
+            { key: 'baseband_version', cmd: 'getprop gsm.version.baseband' },
+            { key: 'ril_version', cmd: 'getprop gsm.version.ril-impl' },
+            { key: 'modem_version', cmd: 'getprop persist.radio.modem.version' },
+            { key: 'imei', cmd: 'dumpsys iphonesubinfo' },
+            { key: 'telephony', cmd: 'dumpsys telephony.registry' },
+            { key: 'phone', cmd: 'dumpsys phone' },
+            { key: 'radio_log', cmd: 'logcat -d -b radio -t 100' },
+            { key: 'operator', cmd: 'getprop gsm.operator.alpha' },
+            { key: 'network_type', cmd: 'getprop gsm.network.type' },
+            { key: 'sim_state', cmd: 'getprop gsm.sim.state' },
+            { key: 'sim_operator', cmd: 'getprop gsm.sim.operator.alpha' },
+            { key: 'data_state', cmd: 'getprop gsm.nitz.time' },
+            { key: 'carrier_config', cmd: 'dumpsys carrier_config' },
+            { key: 'signal_strength', cmd: 'dumpsys telephony.registry' }
+        ]
+    },
+    MODEM_DIAGNOSTICS: {
+        description: 'Diagnostico de modem: radio logs, erros de rede, estado RIL',
+        commands: [
+            { key: 'radio_errors', cmd: 'logcat -d -b radio -t 200' },
+            { key: 'telephony_errors', cmd: 'logcat -d -s Telephony:E RIL:E RILJ:E -t 100' },
+            { key: 'ril_daemon', cmd: 'getprop rild.libpath' },
+            { key: 'ril_args', cmd: 'getprop rild.libargs' },
+            { key: 'data_activity', cmd: 'dumpsys telephony.registry' },
+            { key: 'telecom', cmd: 'dumpsys telecom' },
+            { key: 'network_policies', cmd: 'dumpsys netpolicy' }
+        ]
+    },
+
+    // ===== FIRMWARE ANALYSIS (DeepADB-inspired) =====
+    FIRMWARE_PROBE: {
+        description: 'Sondagem de firmware: build, partitions, bootloader, kernel, patches',
+        commands: [
+            { key: 'fingerprint', cmd: 'getprop ro.build.fingerprint' },
+            { key: 'build_date', cmd: 'getprop ro.build.date' },
+            { key: 'build_type', cmd: 'getprop ro.build.type' },
+            { key: 'build_flavor', cmd: 'getprop ro.build.flavor' },
+            { key: 'bootloader', cmd: 'getprop ro.bootloader' },
+            { key: 'kernel', cmd: 'cat /proc/version' },
+            { key: 'security_patch', cmd: 'getprop ro.build.version.security_patch' },
+            { key: 'vendor_patch', cmd: 'getprop ro.vendor.build.security_patch' },
+            { key: 'partitions', cmd: 'cat /proc/partitions' },
+            { key: 'mounts', cmd: 'cat /proc/mounts' },
+            { key: 'verified_boot', cmd: 'getprop ro.boot.verifiedbootstate' },
+            { key: 'slot', cmd: 'getprop ro.boot.slot_suffix' },
+            { key: 'baseband', cmd: 'getprop gsm.version.baseband' }
+        ]
+    },
+
+    // ===== AT COMMANDS PROBE (DeepADB-inspired) =====
+    AT_COMMAND_PROBE: {
+        description: 'Deteccao de interfaces AT command e portas seriais do modem',
+        commands: [
+            { key: 'usb_devices', cmd: 'ls -la /dev/smd*' },
+            { key: 'tty_devices', cmd: 'ls -la /dev/ttyUSB* /dev/ttyACM* /dev/ttyHS*' },
+            { key: 'diag_port', cmd: 'ls -la /dev/diag' },
+            { key: 'usb_config', cmd: 'getprop sys.usb.config' },
+            { key: 'usb_state', cmd: 'getprop sys.usb.state' },
+            { key: 'persist_usb', cmd: 'getprop persist.sys.usb.config' },
+            { key: 'radio_log', cmd: 'logcat -d -b radio -t 50' }
+        ]
+    },
+
+    // ===== FORENSIC ARTIFACTS (DroidForensics-inspired) =====
+    FORENSIC_ARTIFACTS: {
+        description: 'Coleta completa de artefatos forenses: apps, contas, configs, historico, rede',
+        commands: [
+            { key: 'device_id', cmd: 'getprop ro.serialno' },
+            { key: 'build_fingerprint', cmd: 'getprop ro.build.fingerprint' },
+            { key: 'android_version', cmd: 'getprop ro.build.version.release' },
+            { key: 'all_props', cmd: 'getprop' },
+            { key: 'packages_all', cmd: 'pm list packages' },
+            { key: 'packages_user', cmd: 'pm list packages -3' },
+            { key: 'packages_system', cmd: 'pm list packages -s' },
+            { key: 'packages_disabled', cmd: 'pm list packages -d' },
+            { key: 'accounts', cmd: 'dumpsys account' },
+            { key: 'settings_global', cmd: 'settings list global' },
+            { key: 'settings_secure', cmd: 'settings list secure' },
+            { key: 'settings_system', cmd: 'settings list system' },
+            { key: 'network_info', cmd: 'ip addr' },
+            { key: 'routes', cmd: 'ip route' },
+            { key: 'dns', cmd: 'getprop net.dns1' },
+            { key: 'hosts', cmd: 'cat /etc/hosts' },
+            { key: 'mounts', cmd: 'mount' },
+            { key: 'disk', cmd: 'df -h' },
+            { key: 'uptime', cmd: 'cat /proc/uptime' },
+            { key: 'selinux', cmd: 'getprop ro.boot.selinux' },
+            { key: 'encryption', cmd: 'getprop ro.crypto.state' },
+            { key: 'usb_debug', cmd: 'settings get global adb_enabled' }
+        ]
+    },
+
+    // ===== CONNECTIVITY DEEP DIVE =====
+    CONNECTIVITY_DEEP: {
+        description: 'Analise profunda de conectividade: TCP, UDP, DNS, rotas, interfaces',
+        commands: [
+            { key: 'ip_addr', cmd: 'ip addr' },
+            { key: 'ip_route', cmd: 'ip route' },
+            { key: 'ip_link', cmd: 'ip link' },
+            { key: 'tcp_connections', cmd: 'cat /proc/net/tcp' },
+            { key: 'tcp6_connections', cmd: 'cat /proc/net/tcp6' },
+            { key: 'udp_connections', cmd: 'cat /proc/net/udp' },
+            { key: 'dns1', cmd: 'getprop net.dns1' },
+            { key: 'dns2', cmd: 'getprop net.dns2' },
+            { key: 'net_dev', cmd: 'cat /proc/net/dev' },
+            { key: 'wireless', cmd: 'cat /proc/net/wireless' },
+            { key: 'connectivity', cmd: 'dumpsys connectivity' },
+            { key: 'netstats', cmd: 'dumpsys netstats' },
+            { key: 'ping', cmd: 'ping -c 3 8.8.8.8' }
+        ]
+    },
+
+    // ===== POWER & WAKE ANALYSIS =====
+    POWER_ANALYSIS: {
+        description: 'Analise de consumo de energia: wakelocks, idle mode, jobs agendados',
+        commands: [
+            { key: 'battery', cmd: 'dumpsys battery' },
+            { key: 'batterystats', cmd: 'dumpsys batterystats' },
+            { key: 'power', cmd: 'dumpsys power' },
+            { key: 'deviceidle', cmd: 'dumpsys deviceidle' },
+            { key: 'alarm', cmd: 'dumpsys alarm' },
+            { key: 'usagestats', cmd: 'dumpsys usagestats' }
+        ]
+    },
+
+    // ===== NOTIFICATION & UI STATE =====
+    NOTIFICATION_ANALYSIS: {
+        description: 'Analise de notificacoes, barra de status e estado da UI',
+        commands: [
+            { key: 'notification', cmd: 'dumpsys notification' },
+            { key: 'statusbar', cmd: 'dumpsys statusbar' },
+            { key: 'accessibility', cmd: 'dumpsys accessibility' },
+            { key: 'input_method', cmd: 'dumpsys input_method' },
+            { key: 'window', cmd: 'dumpsys window' }
+        ]
+    },
+
+    // ===== SENSOR ANALYSIS =====
+    SENSOR_ANALYSIS: {
+        description: 'Diagnostico de sensores: acelerometro, giroscopio, GPS, proximidade',
+        commands: [
+            { key: 'sensors', cmd: 'dumpsys sensorservice' },
+            { key: 'input_devices', cmd: 'dumpsys input' },
+            { key: 'location', cmd: 'dumpsys location' }
+        ]
+    },
+
+    // ===== FORENSIC CHAIN OF CUSTODY =====
+    FORENSIC_CHAIN: {
+        description: 'Cadeia de custodia forense: identidade, estado, hash, timeline, backup metadata',
+        commands: [
+            // Identity
+            { key: 'serial', cmd: 'getprop ro.serialno' },
+            { key: 'model', cmd: 'getprop ro.product.model' },
+            { key: 'brand', cmd: 'getprop ro.product.brand' },
+            { key: 'fingerprint', cmd: 'getprop ro.build.fingerprint' },
+            { key: 'android', cmd: 'getprop ro.build.version.release' },
+            { key: 'imei', cmd: 'dumpsys iphonesubinfo' },
+            // Timestamps
+            { key: 'current_time', cmd: 'date' },
+            { key: 'uptime', cmd: 'cat /proc/uptime' },
+            { key: 'boot_time', cmd: 'getprop ro.boottime.init' },
+            // Security state
+            { key: 'selinux', cmd: 'getprop ro.boot.selinux' },
+            { key: 'verified_boot', cmd: 'getprop ro.boot.verifiedbootstate' },
+            { key: 'encryption', cmd: 'getprop ro.crypto.state' },
+            { key: 'adb_enabled', cmd: 'settings get global adb_enabled' },
+            { key: 'usb_config', cmd: 'getprop sys.usb.config' },
+            // Event timeline (recent logs)
+            { key: 'events_recent', cmd: 'logcat -d -b events -t 100' },
+            { key: 'system_recent', cmd: 'logcat -d -b system -t 100' },
+            { key: 'crash_log', cmd: 'logcat -d -b crash' },
+            // Accounts & connectivity
+            { key: 'accounts', cmd: 'dumpsys account' },
+            { key: 'network', cmd: 'ip addr' },
+            { key: 'wifi_state', cmd: 'dumpsys wifi' }
+        ]
+    },
+
+    // ===== RADIO & BASEBAND DEEP (for modem analysis) =====
+    RADIO_DEEP_ANALYSIS: {
+        description: 'Analise profunda de radio: logs extensos, erros RIL, estado completo do modem',
+        commands: [
+            { key: 'radio_full', cmd: 'logcat -d -b radio -t 500' },
+            { key: 'telephony_full', cmd: 'dumpsys telephony.registry' },
+            { key: 'phone_full', cmd: 'dumpsys phone' },
+            { key: 'telecom', cmd: 'dumpsys telecom' },
+            { key: 'carrier', cmd: 'dumpsys carrier_config' },
+            { key: 'baseband', cmd: 'getprop gsm.version.baseband' },
+            { key: 'ril_impl', cmd: 'getprop gsm.version.ril-impl' },
+            { key: 'ril_path', cmd: 'getprop rild.libpath' },
+            { key: 'network_type', cmd: 'getprop gsm.network.type' },
+            { key: 'data_state', cmd: 'getprop gsm.nitz.time' },
+            { key: 'sim_state', cmd: 'getprop gsm.sim.state' },
+            { key: 'operator', cmd: 'getprop gsm.operator.alpha' },
+            { key: 'signal', cmd: 'dumpsys telephony.registry' }
+        ]
     }
 };
 
@@ -482,6 +685,143 @@ class SkillRunner {
                     if (vol) parts.push(`Volume musica: ${vol[1]}`);
                     const route = details.audio.match(/Selected Output.*?(\w+)/s);
                     if (route) parts.push(`Saida: ${route[1]}`);
+                }
+                break;
+            }
+            case 'BASEBAND_ANALYSIS': {
+                if (details.baseband_version) parts.push(`Baseband: ${details.baseband_version.trim()}`);
+                if (details.operator) parts.push(`Operadora: ${details.operator.trim()}`);
+                if (details.network_type) parts.push(`Rede: ${details.network_type.trim()}`);
+                if (details.sim_state) parts.push(`SIM: ${details.sim_state.trim()}`);
+                if (details.sim_operator) parts.push(`SIM Op: ${details.sim_operator.trim()}`);
+                if (details.ril_version) parts.push(`RIL: ${details.ril_version.trim()}`);
+                if (details.telephony) parts.push(this._extractSignalSummary(details.telephony));
+                if (details.radio_log) {
+                    const errors = (details.radio_log.match(/error|fail|reject/gi) || []).length;
+                    if (errors) parts.push(`${errors} erros no radio log`);
+                }
+                break;
+            }
+            case 'MODEM_DIAGNOSTICS': {
+                if (details.radio_errors) {
+                    const lines = details.radio_errors.split('\n').filter(l => l.trim()).length;
+                    parts.push(`${lines} linhas de radio log`);
+                    const errors = (details.radio_errors.match(/error|fail|reject|denied/gi) || []).length;
+                    if (errors) parts.push(`${errors} erros detectados`);
+                }
+                if (details.ril_daemon) parts.push(`RIL: ${details.ril_daemon.trim()}`);
+                break;
+            }
+            case 'FIRMWARE_PROBE': {
+                if (details.fingerprint) parts.push(`Build: ${details.fingerprint.trim().substring(0, 60)}`);
+                if (details.build_date) parts.push(`Data: ${details.build_date.trim()}`);
+                if (details.kernel) {
+                    const kver = details.kernel.match(/Linux version (\S+)/);
+                    if (kver) parts.push(`Kernel: ${kver[1]}`);
+                }
+                if (details.security_patch) parts.push(`Patch: ${details.security_patch.trim()}`);
+                if (details.bootloader) parts.push(`Bootloader: ${details.bootloader.trim()}`);
+                if (details.verified_boot) parts.push(`Verified: ${details.verified_boot.trim()}`);
+                if (details.slot) parts.push(`Slot: ${details.slot.trim()}`);
+                break;
+            }
+            case 'AT_COMMAND_PROBE': {
+                const found = [];
+                if (details.usb_devices && !details.usb_devices.includes('No such')) found.push('smd');
+                if (details.tty_devices && !details.tty_devices.includes('No such')) found.push('ttyUSB/ACM');
+                if (details.diag_port && !details.diag_port.includes('No such')) found.push('DIAG');
+                parts.push(found.length > 0 ? `Interfaces encontradas: ${found.join(', ')}` : 'Nenhuma interface AT detectada');
+                if (details.usb_config) parts.push(`USB config: ${details.usb_config.trim()}`);
+                break;
+            }
+            case 'FORENSIC_ARTIFACTS': {
+                if (details.device_id) parts.push(`Serial: ${details.device_id.trim()}`);
+                if (details.android_version) parts.push(`Android ${details.android_version.trim()}`);
+                if (details.packages_all) {
+                    const total = details.packages_all.split('\n').filter(l => l.startsWith('package:')).length;
+                    parts.push(`${total} pacotes`);
+                }
+                if (details.packages_user) {
+                    const user = details.packages_user.split('\n').filter(l => l.startsWith('package:')).length;
+                    parts.push(`${user} apps terceiros`);
+                }
+                if (details.accounts) {
+                    const accs = (details.accounts.match(/Account \{/gi) || []).length;
+                    parts.push(`${accs} contas`);
+                }
+                if (details.selinux) parts.push(`SELinux: ${details.selinux.trim()}`);
+                if (details.encryption) parts.push(`Crypto: ${details.encryption.trim()}`);
+                break;
+            }
+            case 'CONNECTIVITY_DEEP': {
+                if (details.ip_addr) {
+                    const ips = (details.ip_addr.match(/inet \d+\.\d+\.\d+\.\d+/g) || []).length;
+                    parts.push(`${ips} endereco(s) IP`);
+                }
+                if (details.tcp_connections) {
+                    const conns = details.tcp_connections.split('\n').filter(l => l.trim() && !l.startsWith('sl')).length;
+                    parts.push(`${conns} conexoes TCP`);
+                }
+                if (details.dns1) parts.push(`DNS: ${details.dns1.trim()}`);
+                if (details.ping) {
+                    const loss = details.ping.match(/(\d+)% packet loss/);
+                    if (loss) parts.push(`Ping 8.8.8.8: ${loss[1]}% perda`);
+                }
+                break;
+            }
+            case 'POWER_ANALYSIS': {
+                if (details.battery) parts.push(this._extractBatterySummary(details.battery));
+                if (details.deviceidle) {
+                    const state = details.deviceidle.match(/mState=(\w+)/);
+                    if (state) parts.push(`Doze: ${state[1]}`);
+                }
+                if (details.alarm) {
+                    const alarms = (details.alarm.match(/Batch\{/g) || []).length;
+                    parts.push(`${alarms} alarmes agendados`);
+                }
+                break;
+            }
+            case 'NOTIFICATION_ANALYSIS': {
+                if (details.notification) {
+                    const count = (details.notification.match(/NotificationRecord/g) || []).length;
+                    parts.push(`${count} notificacoes ativas`);
+                }
+                break;
+            }
+            case 'SENSOR_ANALYSIS': {
+                if (details.sensors) {
+                    const count = (details.sensors.match(/name=/gi) || []).length;
+                    parts.push(`${count} sensores disponíveis`);
+                }
+                break;
+            }
+            case 'FORENSIC_CHAIN': {
+                if (details.serial) parts.push(`Serial: ${details.serial.trim()}`);
+                if (details.model) parts.push(`Modelo: ${details.model.trim()}`);
+                if (details.current_time) parts.push(`Coleta: ${details.current_time.trim()}`);
+                if (details.selinux) parts.push(`SELinux: ${details.selinux.trim()}`);
+                if (details.verified_boot) parts.push(`Verified: ${details.verified_boot.trim()}`);
+                if (details.encryption) parts.push(`Crypto: ${details.encryption.trim()}`);
+                if (details.crash_log) {
+                    const crashes = details.crash_log.split('\n').filter(l => l.trim()).length;
+                    if (crashes > 0) parts.push(`${crashes} linhas crash log`);
+                }
+                if (details.accounts) {
+                    const accs = (details.accounts.match(/Account \{/gi) || []).length;
+                    parts.push(`${accs} contas`);
+                }
+                break;
+            }
+            case 'RADIO_DEEP_ANALYSIS': {
+                if (details.baseband) parts.push(`Baseband: ${details.baseband.trim()}`);
+                if (details.ril_impl) parts.push(`RIL: ${details.ril_impl.trim()}`);
+                if (details.operator) parts.push(`Operadora: ${details.operator.trim()}`);
+                if (details.network_type) parts.push(`Rede: ${details.network_type.trim()}`);
+                if (details.sim_state) parts.push(`SIM: ${details.sim_state.trim()}`);
+                if (details.radio_full) {
+                    const lines = details.radio_full.split('\n').filter(l => l.trim()).length;
+                    const errors = (details.radio_full.match(/error|fail|reject|denied/gi) || []).length;
+                    parts.push(`${lines} linhas radio log, ${errors} erros`);
                 }
                 break;
             }

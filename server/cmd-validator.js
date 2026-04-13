@@ -15,7 +15,9 @@ class CmdValidator {
             'getprop', 'getprop ro.*', 'settings get',
             'ifconfig', 'ip route', 'netstat -t',
             'pm list packages', 'pm list features',
-            'dumpsys package', 'dumpsys alarm'
+            'dumpsys package', 'dumpsys alarm',
+            'logcat -d -t', 'cat /proc/loadavg',
+            'dumpsys telephony.registry', 'dumpsys connectivity'
         ];
 
         // MEDIUM RISK - Write operations, requires REPAIR mode

@@ -371,7 +371,7 @@ class AIONServer {
                 res.json({
                     ...result,
                     sessionId,
-                    actions: result.suggestedActions || []
+                    actions: result.actions || []
                 });
             } catch (err) { log.error('Chat failed', { error: err.message }); res.status(500).json({ error: err.message }); }
         });
@@ -631,6 +631,10 @@ class AIONServer {
                 const v = this.validator.validateWithRisk(payload.command);
                 if (!v.allowed) return Promise.reject(new Error(`Command blocked: ${v.reason}`));
                 return this.adb.execute(payload.command);
+            },
+            'RUN_SKILL': async () => {
+                if (!payload?.skill) throw new Error('No skill specified');
+                return this.ai.skills.execute(payload.skill);
             }
         };
 

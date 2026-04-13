@@ -1,4 +1,12 @@
 const https = require('https');
+const SkillRunner = require('./skills');
+
+const VALID_ACTION_TYPES = [
+    'GET_PROPS', 'DUMPSYS_BATTERY', 'DUMPSYS_MEMINFO', 'DUMPSYS_WIFI',
+    'LIST_PACKAGES', 'GET_CPU', 'GET_MEMORY', 'GET_TEMP',
+    'GET_PROCESSES', 'GET_DISK', 'CAPTURE_SCREENSHOT', 'SHELL_SAFE',
+    'RUN_SKILL'
+];
 
 class AiAgent {
     constructor(adb, validator) {
@@ -22,102 +30,219 @@ class AiAgent {
                 'X-Title': process.env.OPENROUTER_APP_NAME || 'AION Repair OS'
             };
         this.histories = new Map();
+        this.skills = new SkillRunner(this.adb, this.validator);
 
-        this.systemPrompt = `Você é AION, o agente técnico principal do AION Repair OS.
+        this.systemPrompt = `Voce e AION, agente tecnico do AION Repair OS. Especialista calmo, preciso e objetivo em diagnostico e reparo de smartphones Android. Responda SEMPRE em portugues do Brasil.
 
-Sua função é conversar com clientes de forma natural, elegante e objetiva, como um assistente técnico altamente competente, no estilo de um “Jarvis” para diagnóstico e reparo de smartphones Android. Você não é um chatbot genérico de atendimento. Você é um especialista calmo, preciso, humano e seguro.
+<formato>
+Toda resposta DEVE seguir este formato exato:
+<think>Seu raciocinio interno (nunca mostrado ao cliente)</think>
+<response>Texto para o cliente (max 4 frases, texto corrido, sem markdown, sem emoji, 1 pergunta por vez)</response>
+<actions>[lista de acoes JSON ou vazio []]</actions>
+</formato>
 
-IDENTIDADE
-- Seu nome é AION. Você faz parte do sistema AION Repair OS.
-- Se perguntarem quem te criou, diga apenas que você é o AION, assistente técnico do AION Repair OS. Não invente nomes de empresas, equipes ou desenvolvedores.
-- Você não tem opinião pessoal, não tem emoções, não faz piadas.
+<ferramentas>
+Voce pode solicitar acoes do sistema. Cada acao e um objeto JSON com “type” obrigatorio.
+Acoes disponiveis:
+- GET_PROPS: propriedades do sistema (getprop)
+- DUMPSYS_BATTERY: status detalhado da bateria
+- DUMPSYS_MEMINFO: uso de memoria detalhado
+- DUMPSYS_WIFI: detalhes da conexao Wi-Fi
+- LIST_PACKAGES: lista de apps instalados
+- GET_CPU: uso de CPU (/proc/stat)
+- GET_MEMORY: memoria do sistema (/proc/meminfo)
+- GET_TEMP: temperaturas das zonas termicas
+- GET_PROCESSES: processos em execucao com uso de recursos
+- GET_DISK: uso de armazenamento
+- CAPTURE_SCREENSHOT: captura de tela (risco MEDIO, requer confirmacao)
+- SHELL_SAFE: comando shell customizado. Requer campo “command”. Ex: {“type”:”SHELL_SAFE”,”command”:”dumpsys activity”}
+- RUN_SKILL: executa diagnostico composto. Requer campo “skill”. Skills: FULL_DIAGNOSTIC, BATTERY_HEALTH, THERMAL_ANALYSIS, STORAGE_CLEANUP, NETWORK_DIAGNOSTIC, PERFORMANCE_PROFILE, APP_ANALYSIS, SECURITY_CHECK
+</ferramentas>
 
-IDIOMA
-- Responda SEMPRE em português do Brasil.
-- Se o cliente escrever em outro idioma, responda nesse idioma SOMENTE se ele pedir explicitamente para mudar o idioma.
-- Nunca misture idiomas na mesma resposta.
+<decisao>
+Quando usar ferramentas:
+- Cliente relata problema -> use a ferramenta relevante para investigar
+- Cliente pede analise geral -> use RUN_SKILL com FULL_DIAGNOSTIC
+- Cliente pede dado especifico -> use a ferramenta correspondente
+- Saudacao simples (“oi”) -> NAO use ferramentas
+- Ja tem dados suficientes no contexto -> NAO use ferramentas desnecessariamente
+- Prefira RUN_SKILL sobre multiplas acoes individuais quando precisa de varios dados
+- Maximo 3 acoes por resposta
+</decisao>
 
-CONTEXTO DO SISTEMA
-- Você opera dentro de um sistema de diagnóstico Android com telemetria em tempo real, console ADB, leitura de sensores e análise técnica do aparelho.
-- Você recebe dados reais do aparelho (bateria, temperatura, armazenamento, etc.) injetados no contexto da conversa.
-- Esses dados existem para apoiar a conversa, não para serem despejados sem necessidade.
+<regras>
+- NUNCA invente dados. Cite APENAS o que aparece em [DADOS DO DISPOSITIVO] ou [PERFIL DO DISPOSITIVO].
+- Se nao tem um dado, diga que nao tem e solicite a ferramenta para obte-lo.
+- Maximo 4 frases em <response>. Sem excecao.
+- 1 pergunta por vez. Sem listas. Texto corrido simples.
+- Foco no proximo passo mais util, nao em 5 solucoes de uma vez.
+- Adapte vocabulario: leigo = linguagem simples; tecnico = termos precisos.
+- Fora de escopo: diga educadamente que so cuida de diagnostico Android.
+</regras>
 
-REGRA ABSOLUTA SOBRE DADOS TÉCNICOS
-- Cite APENAS os dados que aparecem no bloco [DADOS DO DISPOSITIVO] e [PERFIL DO DISPOSITIVO] desta conversa.
-- NUNCA invente, extrapole ou suponha dados que não foram fornecidos (como chipset específico, número de pacotes, saúde da flash, corrente de carga, número de satélites GPS, etc.).
-- Se o cliente pedir um dado que você não tem, diga que não tem esse dado disponível no momento.
-- Se precisar de mais informação, sugira uma verificação ADB específica, mas não fabrique o resultado.
-
-TOM
-- Soe humano, natural, técnico e confiante.
-- Seja educado, mas sem exagero.
-- Personalidade de assistente técnico premium: sereno, rápido, preciso e útil.
-- Nunca pareça vendedor, robótico, ou central de FAQ.
-
-MISSÃO PRINCIPAL
-Conduzir a conversa como um técnico real de reparo:
-1. entender a intenção do cliente,
-2. confirmar o sintoma principal,
-3. analisar um ponto por vez,
-4. só então aprofundar o diagnóstico,
-5. sempre mantendo a conversa leve, curta e clara.
-
-LIMITE DE RESPOSTA (OBRIGATÓRIO)
-- Máximo 4 frases por resposta. Sem exceção. Mesmo que o cliente peça “tudo”, resuma e ofereça aprofundar por partes.
-- Só faça 1 pergunta por vez.
-- Não use markdown (negrito, itálico, listas com asterisco ou traço). Responda em texto corrido simples.
-- Não use emoji.
-
-REGRA DE AÇÕES
-- Não diga “Autoriza?”, “Posso fazer?” ou “Quer que eu execute?” a menos que o sistema realmente tenha um botão de confirmação na interface.
-- Em vez disso, descreva o próximo passo e pergunte se o cliente quer seguir nessa direção.
-
-REGRA CENTRAL DE CONVERSAÇÃO
-Responda sempre com foco no próximo passo mais útil.
-Não entregue uma lista grande de possibilidades.
-Não antecipe 5 soluções ao mesmo tempo.
-
-ADAPTAÇÃO DE VOCABULÁRIO
-- Se o usuário for leigo, use linguagem simples e traduza termos técnicos.
-- Se o usuário for técnico, use terminologia avançada com precisão.
-- Se ambíguo, use linguagem intermediária.
-
-COMO RESPONDER
-- Prefira respostas de 2 a 3 frases curtas.
-- Só mencione dados técnicos se forem relevantes para a mensagem do cliente.
-- Se o cliente disser apenas “oi”, responda como pessoa normal. Não faça relatório.
-- Só cite sensores se: o cliente pedir análise, houver alerta crítico, ou ajudar o próximo passo.
-
-COMPORTAMENTO IDEAL
-- Mensagem vaga: responda simples e puxe o próximo passo.
-- Problema relatado: resuma o que entendeu e faça uma pergunta curta.
-- No máximo 1 dado de telemetria por resposta, a menos que o cliente peça resumo geral.
-- Quando o cliente pedir resumo geral: cite só os dados fornecidos no contexto, de forma compacta, em no máximo 3 frases.
-
-PERGUNTAS FORA DE ESCOPO
-- Se o cliente perguntar algo que não é sobre o celular ou diagnóstico, diga de forma curta e educada que só cuida de diagnóstico Android e pergunte se tem algo no aparelho para ver.
-
-EXEMPLOS
-
+<exemplos>
 Cliente: “oi”
-“Oi, tudo certo. Me conta: tem algo no celular que precisa de atenção?”
+<think>Saudacao simples. Sem acao tecnica necessaria.</think>
+<response>Oi, tudo certo. Me conta: tem algo no celular que precisa de atencao?</response>
+<actions>[]</actions>
 
-Cliente: “meu celular tá esquentando”
-“Entendi. Esse aquecimento aparece mais com algum app específico ou mesmo com o aparelho parado?”
+Cliente: “meu celular ta esquentando”
+<think>Aquecimento reportado. Temperatura atual nos sensores: 48C (alto). Preciso verificar processos consumindo CPU e zonas termicas para identificar a causa.</think>
+<response>A temperatura esta em 48C, acima do normal. Vou verificar quais processos estao forcando o processador pra identificar a causa.</response>
+<actions>[{“type”:”GET_PROCESSES”},{“type”:”GET_TEMP”}]</actions>
 
-Cliente: “analisa meu aparelho”
-“Verificando agora. O armazenamento está em 90%, que é o ponto mais crítico. Quer que eu comece por aí?”
+Cliente: “faz um diagnostico completo”
+<think>Cliente quer visao geral. Melhor usar o skill FULL_DIAGNOSTIC que executa 7 verificacoes de uma vez.</think>
+<response>Vou rodar um diagnostico completo agora. Isso verifica bateria, memoria, CPU, armazenamento, temperatura e conectividade de uma vez.</response>
+<actions>[{“type”:”RUN_SKILL”,”skill”:”FULL_DIAGNOSTIC”}]</actions>
 
-Cliente: “me fala tudo do aparelho”
-“O mais relevante agora: temperatura em 75°C, armazenamento em 90% e sinal fraco. Quer que eu detalhe algum desses pontos?”
-
-Você deve agir sempre como um especialista real acompanhando um aparelho real, com presença calma, domínio técnico e comunicação limpa.`;
+Cliente: “verifica a bateria”
+<think>Pedido especifico de bateria. Telemetria mostra 45% descarregando. Preciso dados detalhados do dumpsys.</think>
+<response>Sua bateria esta em 45% e descarregando. Vou puxar os dados detalhados de saude pra te dar um panorama completo.</response>
+<actions>[{“type”:”DUMPSYS_BATTERY”}]</actions>
+</exemplos>`;
     }
 
     _getHistory(sessionId) {
         const sid = sessionId || '_default';
         if (!this.histories.has(sid)) this.histories.set(sid, []);
         return this.histories.get(sid);
+    }
+
+    _parseAIResponse(rawText) {
+        const thinkMatch = rawText.match(/<think>([\s\S]*?)<\/think>/);
+        const responseMatch = rawText.match(/<response>([\s\S]*?)<\/response>/);
+        const actionsMatch = rawText.match(/<actions>([\s\S]*?)<\/actions>/);
+
+        let response = responseMatch ? responseMatch[1].trim() : rawText.trim();
+        let actions = [];
+        let reasoning = thinkMatch ? thinkMatch[1].trim() : null;
+
+        // Remove tags from response if fallback (no <response> tags but has other tags)
+        if (!responseMatch) {
+            response = response
+                .replace(/<think>[\s\S]*?<\/think>/g, '')
+                .replace(/<actions>[\s\S]*?<\/actions>/g, '')
+                .trim();
+        }
+
+        if (actionsMatch) {
+            try {
+                const parsed = JSON.parse(actionsMatch[1].trim());
+                if (Array.isArray(parsed)) {
+                    actions = this._validateActions(parsed);
+                }
+            } catch {
+                console.log('[AI] Failed to parse actions JSON, ignoring');
+            }
+        }
+
+        if (reasoning) {
+            console.log(`[AI] Reasoning: ${reasoning.substring(0, 200)}`);
+        }
+
+        return { response, actions, reasoning };
+    }
+
+    _validateActions(actions) {
+        return actions.filter(action => {
+            if (!action || !action.type) return false;
+            if (!VALID_ACTION_TYPES.includes(action.type)) {
+                console.log(`[AI] Filtered invalid action type: ${action.type}`);
+                return false;
+            }
+            if (action.type === 'SHELL_SAFE') {
+                if (!action.command) return false;
+                const validation = this.validator.validateWithRisk(action.command);
+                if (!validation.allowed) {
+                    console.log(`[AI] Filtered blocked SHELL_SAFE command: ${action.command}`);
+                    return false;
+                }
+            }
+            return true;
+        }).slice(0, 3); // Max 3 actions per turn
+    }
+
+    _actionToCommand(action) {
+        const map = {
+            'GET_PROPS': 'getprop',
+            'DUMPSYS_BATTERY': 'dumpsys battery',
+            'DUMPSYS_MEMINFO': 'dumpsys meminfo',
+            'DUMPSYS_WIFI': 'dumpsys wifi',
+            'LIST_PACKAGES': 'pm list packages',
+            'GET_CPU': 'cat /proc/stat',
+            'GET_MEMORY': 'cat /proc/meminfo',
+            'GET_TEMP': 'cat /sys/class/thermal/thermal_zone*/temp',
+            'GET_PROCESSES': 'ps -A',
+            'GET_DISK': 'df -h',
+            'CAPTURE_SCREENSHOT': 'screencap -p /sdcard/aion_screen.png'
+        };
+        if (action.type === 'SHELL_SAFE') return action.command;
+        return map[action.type] || null;
+    }
+
+    _truncateToolResult(actionType, result) {
+        if (!result) return '(sem saida)';
+        const max = 2000;
+        if (actionType === 'GET_PROCESSES' && result.length > max) {
+            const lines = result.split('\n');
+            return lines.slice(0, 21).join('\n') + `\n... (${lines.length} processos total)`;
+        }
+        if (actionType === 'LIST_PACKAGES' && result.length > max) {
+            const lines = result.split('\n');
+            return `Total: ${lines.length} pacotes\n` + lines.slice(0, 30).join('\n') + '\n...';
+        }
+        if (result.length > max) return result.substring(0, max) + '\n... (truncado)';
+        return result;
+    }
+
+    async _executeToolActions(actions) {
+        const results = [];
+        for (const action of actions) {
+            if (action.type === 'RUN_SKILL') {
+                try {
+                    const skillResult = await this.skills.execute(action.skill);
+                    results.push({ type: 'RUN_SKILL', skill: action.skill, result: skillResult.summary, error: !skillResult.success });
+                } catch (err) {
+                    results.push({ type: 'RUN_SKILL', skill: action.skill, result: `Erro na skill: ${err.message}`, error: true });
+                }
+                continue;
+            }
+            const cmd = this._actionToCommand(action);
+            if (!cmd) continue;
+            const validation = this.validator.validateWithRisk(cmd);
+            if (!validation.allowed) {
+                results.push({ type: action.type, result: `Comando bloqueado: ${validation.reason}`, error: true });
+                continue;
+            }
+            if (validation.risk !== 'LOW') {
+                // MEDIUM/HIGH: don't auto-execute, return to frontend
+                results.push({ type: action.type, result: null, risk: validation.risk, pendingFrontend: true });
+                continue;
+            }
+            try {
+                const output = await this.adb.execute(cmd);
+                results.push({ type: action.type, result: this._truncateToolResult(action.type, output), error: false });
+            } catch (err) {
+                results.push({ type: action.type, result: `Erro: ${err.message}`, error: true });
+            }
+        }
+        return results;
+    }
+
+    _buildToolResultsContext(results) {
+        const parts = ['[RESULTADOS DAS ACOES EXECUTADAS]'];
+        for (const r of results) {
+            if (r.pendingFrontend) continue;
+            if (r.error) {
+                parts.push(`<tool_error type="${r.type}">${r.result}</tool_error>`);
+            } else {
+                parts.push(`<tool_result type="${r.type}">${r.result}</tool_result>`);
+            }
+        }
+        parts.push('[/RESULTADOS]');
+        parts.push('Agora responda ao cliente com base nesses dados reais. Nao invente dados alem do que foi retornado. Use o formato <think><response><actions>.');
+        return parts.join('\n');
     }
 
     async chat(message, sensorData, context = {}) {
@@ -136,9 +261,49 @@ Você deve agir sempre como um especialista real acompanhando um aparelho real, 
         }
 
         try {
-            const response = await this._callAIProvider(message, sensorData, context, history);
-            history.push({ role: 'assistant', content: response });
-            return { success: true, response, model: this.model };
+            const rawResponse = await this._callAIProvider(message, sensorData, context, history);
+            const parsed = this._parseAIResponse(rawResponse);
+
+            // Tool execution loop: if AI requested LOW risk actions, execute and re-call
+            const lowRiskActions = parsed.actions.filter(a => {
+                if (a.type === 'RUN_SKILL') return true;
+                const cmd = this._actionToCommand(a);
+                if (!cmd) return false;
+                const v = this.validator.validateWithRisk(cmd);
+                return v.allowed && v.risk === 'LOW';
+            });
+            const nonLowActions = parsed.actions.filter(a => !lowRiskActions.includes(a));
+
+            if (lowRiskActions.length > 0 && this.adb.isConnected()) {
+                console.log(`[AI] Executing ${lowRiskActions.length} tool action(s)...`);
+                const toolResults = await this._executeToolActions(lowRiskActions);
+                const hasResults = toolResults.some(r => !r.pendingFrontend && r.result);
+
+                if (hasResults) {
+                    // Inject tool results and call AI again for informed response
+                    const toolContext = this._buildToolResultsContext(toolResults);
+                    history.push({ role: 'assistant', content: parsed.response });
+                    history.push({ role: 'user', content: toolContext });
+
+                    const followupRaw = await this._callAIProvider(toolContext, sensorData, context, history);
+                    const followup = this._parseAIResponse(followupRaw);
+
+                    // Remove the injected messages from visible history
+                    history.splice(-2, 2);
+                    history.push({ role: 'assistant', content: followup.response });
+
+                    return {
+                        success: true,
+                        response: followup.response,
+                        actions: [...nonLowActions, ...followup.actions],
+                        executedActions: toolResults,
+                        model: this.model
+                    };
+                }
+            }
+
+            history.push({ role: 'assistant', content: parsed.response });
+            return { success: true, response: parsed.response, actions: parsed.actions, model: this.model };
         } catch (err) {
             const errorMsg = err.message || 'Unknown error';
             console.error(`[AI] ${this.providerLabel} API error:`, errorMsg);

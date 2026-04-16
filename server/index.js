@@ -25,7 +25,7 @@ class AIONServer {
         this.adb = new AdbBridge();
         this.sensors = new SensorPoller(this.adb);
         this.validator = new CmdValidator();
-        this.ai = new AiAgent(this.adb, this.validator);
+        this.ai = new AiAgent(this.adb, this.validator, (msg) => this.broadcast(msg));
         this.executor = new AiExecutor(this.sensors, this.validator, this.adb);
 
         this.port = Number(process.env.PORT) || 3001;

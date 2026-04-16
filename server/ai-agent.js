@@ -16,13 +16,14 @@ const DEFAULT_ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-4-6'
 const ANTHROPIC_API_VERSION = '2023-06-01';
 
 class AiAgent {
-    constructor(adb, validator) {
+    constructor(adb, validator, broadcast) {
         this.adb = adb;
         this.validator = validator;
+        this.broadcast = broadcast || (() => {});
         this.provider = this._detectProvider();
         this._applyProviderConfig();
         this.histories = new Map();
-        this.skills = new SkillRunner(this.adb, this.validator);
+        this.skills = new SkillRunner(this.adb, this.validator, this.broadcast);
 
         this.systemPrompt = `Voce e AION, o agente tecnico do AION Repair OS. Voce e um diagnosticador e reparador de smartphones Android de nivel profissional. Responda SEMPRE em portugues do Brasil.
 
@@ -81,6 +82,28 @@ Baseband: BASEBAND_ANALYSIS, MODEM_DIAGNOSTICS, AT_COMMAND_PROBE, RADIO_DEEP_ANA
 Firmware: FIRMWARE_PROBE
 Forense: LOG_COLLECTION, FORENSIC_SNAPSHOT, FORENSIC_ARTIFACTS, FORENSIC_CHAIN
 </ferramentas>
+
+<autorizacao>
+REGRA DE AUTORIZACAO PARA COMANDOS:
+
+1. COMANDOS DE LEITURA (dumpsys, getprop, cat /proc, ps, logcat -d, pm list, df, etc):
+   Execute LIVREMENTE sem pedir autorizacao. O cliente nao precisa saber de cada comando de leitura.
+   Esses comandos aparecem no terminal em tempo real para quem quiser acompanhar.
+
+2. COMANDOS DE MODIFICACAO (pm clear, am force-stop, settings put, pm disable, pm uninstall --user 0, etc):
+   ANTES de executar, voce DEVE explicar na resposta o que vai fazer e POR QUE, e pedir autorizacao.
+   Exemplo: "Encontrei o app X gerando propagandas. Preciso desinstala-lo do seu celular. Posso prosseguir?"
+   So inclua a acao na lista de actions JUNTO com a explicacao na resposta. O sistema vai mostrar ao cliente
+   e aguardar a confirmacao dele.
+
+3. COMANDOS DESTRUTIVOS (reboot, factory reset, rm, dd):
+   NUNCA execute sem explicar os riscos detalhadamente e obter autorizacao EXPLICITA.
+   Exemplo: "Para resolver isso, seria necessario reiniciar o aparelho. Isso vai fechar todos os apps abertos. Posso reiniciar?"
+
+IMPORTANTE: Quando voce precisa de autorizacao, NAO fique em silencio esperando. PERGUNTE ATIVAMENTE no texto da resposta.
+O cliente esta vendo o chat e o terminal ao mesmo tempo. No chat ele ve a conversa. No terminal ele ve os comandos rodando.
+Sua resposta no chat deve ser clara sobre o que voce quer fazer e por que.
+</autorizacao>
 
 <protocolo>
 TODA mensagem do cliente segue esta ordem:
@@ -380,14 +403,20 @@ Cliente: “ja reiniciei e continua travando”
                 continue;
             }
             if (validation.risk !== 'LOW') {
-                // MEDIUM/HIGH: don't auto-execute, return to frontend
-                results.push({ type: action.type, result: null, risk: validation.risk, pendingFrontend: true });
+                // MEDIUM/HIGH: don't auto-execute, return to frontend for confirmation
+                this.broadcast({ type: 'adb_log', command: cmd, result: `⏳ Aguardando autorização do cliente (${validation.risk})`, risk: validation.risk });
+                results.push({ type: action.type, command: cmd, result: null, risk: validation.risk, reason: action.reason || validation.reason, pendingFrontend: true });
                 continue;
             }
+            // LOW risk: broadcast and execute
+            this.broadcast({ type: 'adb_log', command: cmd, result: '...', risk: 'LOW' });
             try {
                 const output = await this.adb.execute(cmd);
-                results.push({ type: action.type, result: this._truncateToolResult(action.type, output), error: false });
+                const truncated = this._truncateToolResult(action.type, output);
+                this.broadcast({ type: 'adb_log', command: cmd, result: this._truncateToolResult(action.type, output).substring(0, 300), risk: 'LOW' });
+                results.push({ type: action.type, result: truncated, error: false });
             } catch (err) {
+                this.broadcast({ type: 'adb_log', command: cmd, result: `ERRO: ${err.message}`, risk: 'HIGH' });
                 results.push({ type: action.type, result: `Erro: ${err.message}`, error: true });
             }
         }

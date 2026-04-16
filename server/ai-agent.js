@@ -102,9 +102,11 @@ REGRA 2 — FRASES CURTAS E OBJETIVAS
 Nada de textos longos. O cliente esta ali pra resolver um problema, nao pra ler um manual.
 Maximo 3 frases por resposta. Direto ao ponto.
 
-REGRA 3 — COMANDOS DE LEITURA: EXECUTE LIVREMENTE
+REGRA 3 — COMANDOS DE LEITURA: EXECUTE LIVREMENTE E SEM ESPERAR
 Comandos de diagnostico (dumpsys, getprop, cat /proc, ps, logcat, pm list, df, etc) NAO precisam de autorizacao.
 Execute automaticamente. Eles aparecem no terminal em tempo real pro cliente acompanhar.
+NAO espere o cliente dizer "ok" entre cada etapa de diagnostico. Voce e o tecnico — investigue ate encontrar a resposta.
+Se um comando nao retornou os dados que voce precisava, use outro comando imediatamente nas actions. Nao pergunte "posso continuar?" pra leitura — continue.
 
 REGRA 4 — COMANDOS DE MODIFICACAO: EXPLIQUE E PERGUNTE "POSSO SEGUIR?"
 Para qualquer comando que modifica o aparelho (desinstalar app, limpar cache, mudar configuracao, etc):
@@ -126,7 +128,11 @@ Para reboot, factory reset, formatacao, ou qualquer acao irreversivel:
 
 Exemplo: "Pra aplicar essa correcao, preciso reiniciar o aparelho. Todos os apps abertos vao fechar, mas nenhum dado e perdido. Posso seguir?"
 
-REGRA 6 — SE O CLIENTE RECUSAR
+REGRA 6 — NUNCA SE REAPRESENTE
+Voce se apresenta UMA VEZ no inicio (PASSO 0). Depois disso, NUNCA mais diga "sou o AION" ou pergunte o nome do cliente novamente.
+Se o cliente ja disse o nome dele, USE-O nas respostas. Se voce esqueceu, releia o historico — o nome esta la.
+
+REGRA 7 — SE O CLIENTE RECUSAR
 Nao insista. Explique calmamente:
 - "Sem problema. Esse procedimento e seguro, mas entendo a preocupacao. Se mudar de ideia, me avise."
 - Ofereca uma alternativa se existir
@@ -463,6 +469,7 @@ Cliente: “ja reiniciei e continua travando”
         }
         parts.push('[/RESULTADOS]');
         parts.push('Agora responda ao cliente com base nesses dados reais. Nao invente dados alem do que foi retornado. Use o formato <think><response><actions>.');
+        parts.push('IMPORTANTE: Voce JA se apresentou e JA sabe o nome do cliente. NAO se apresente novamente. NAO pergunte o nome novamente. Continue a conversa naturalmente.');
         return parts.join('\n');
     }
 
@@ -470,9 +477,10 @@ Cliente: “ja reiniciei e continua travando”
         const sessionId = context.sessionId || null;
         const history = this._getHistory(sessionId);
 
-        // Manter no máximo 6 mensagens no histórico (3 turnos)
-        if (history.length > 6) {
-            history.splice(0, history.length - 6);
+        // Manter no máximo 20 mensagens no histórico (10 turnos)
+        // Important: keep enough context so the AI remembers the client's name and conversation
+        if (history.length > 20) {
+            history.splice(0, history.length - 20);
         }
 
         history.push({ role: 'user', content: message });
@@ -698,7 +706,7 @@ Cliente: “ja reiniciei e continua travando”
     }
 
     async _callAnthropic(systemContent, history) {
-        const messages = history.slice(-4).map(m => ({
+        const messages = history.slice(-12).map(m => ({
             role: m.role,
             content: m.content
         }));
@@ -764,13 +772,13 @@ Cliente: “ja reiniciei e continua travando”
     async _callOpenAICompatible(systemContent, history) {
         const messages = [
             { role: 'system', content: systemContent },
-            ...history.slice(-4)
+            ...history.slice(-12)
         ];
 
         const body = {
             model: this.model,
             messages,
-            max_tokens: 600,
+            max_tokens: 1024,
             temperature: 0.3
         };
 

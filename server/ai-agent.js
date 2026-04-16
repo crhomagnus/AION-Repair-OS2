@@ -12,28 +12,15 @@ const VALID_ACTION_TYPES = [
 
 const DEFAULT_DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-reasoner';
 const DEFAULT_OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'qwen/qwen3.6-plus';
+const DEFAULT_ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-4-6';
+const ANTHROPIC_API_VERSION = '2023-06-01';
 
 class AiAgent {
     constructor(adb, validator) {
         this.adb = adb;
         this.validator = validator;
         this.provider = this._detectProvider();
-        this.apiKey = this.provider === 'deepseek'
-            ? (process.env.DEEPSEEK_API_KEY || process.env.OPENROUTER_API_KEY || '')
-            : (process.env.OPENROUTER_API_KEY || process.env.DEEPSEEK_API_KEY || '');
-        this.model = this.provider === 'deepseek'
-            ? DEFAULT_DEEPSEEK_MODEL
-            : DEFAULT_OPENROUTER_MODEL;
-        this.apiBaseUrl = this.provider === 'deepseek'
-            ? (process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com')
-            : (process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1');
-        this.providerLabel = this.provider === 'deepseek' ? 'DeepSeek' : 'OpenRouter';
-        this.extraHeaders = this.provider === 'deepseek'
-            ? {}
-            : {
-                'HTTP-Referer': process.env.OPENROUTER_REFERER || 'http://localhost:3001',
-                'X-Title': process.env.OPENROUTER_APP_NAME || 'AION Repair OS'
-            };
+        this._applyProviderConfig();
         this.histories = new Map();
         this.skills = new SkillRunner(this.adb, this.validator);
 
@@ -494,8 +481,12 @@ Cliente: “ja reiniciei e continua travando”
 
     _detectProvider() {
         const explicit = (process.env.AI_PROVIDER || '').trim().toLowerCase();
-        if (explicit === 'deepseek' || explicit === 'openrouter') {
+        if (['deepseek', 'openrouter', 'anthropic'].includes(explicit)) {
             return explicit;
+        }
+
+        if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_MODEL) {
+            return 'anthropic';
         }
 
         if (process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_MODEL) {
@@ -506,15 +497,49 @@ Cliente: “ja reiniciei e continua travando”
             return 'deepseek';
         }
 
-        return 'openrouter';
+        return 'anthropic';
+    }
+
+    _applyProviderConfig() {
+        const p = this.provider;
+        if (p === 'anthropic') {
+            this.apiKey = process.env.ANTHROPIC_API_KEY || '';
+            this.model = process.env.ANTHROPIC_MODEL || DEFAULT_ANTHROPIC_MODEL;
+            this.apiBaseUrl = process.env.ANTHROPIC_API_BASE_URL || 'https://api.anthropic.com';
+            this.providerLabel = 'Anthropic';
+            this.extraHeaders = {};
+        } else if (p === 'deepseek') {
+            this.apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENROUTER_API_KEY || '';
+            this.model = DEFAULT_DEEPSEEK_MODEL;
+            this.apiBaseUrl = process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com';
+            this.providerLabel = 'DeepSeek';
+            this.extraHeaders = {};
+        } else {
+            this.apiKey = process.env.OPENROUTER_API_KEY || process.env.DEEPSEEK_API_KEY || '';
+            this.model = DEFAULT_OPENROUTER_MODEL;
+            this.apiBaseUrl = process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1';
+            this.providerLabel = 'OpenRouter';
+            this.extraHeaders = {
+                'HTTP-Referer': process.env.OPENROUTER_REFERER || 'http://localhost:3001',
+                'X-Title': process.env.OPENROUTER_APP_NAME || 'AION Repair OS'
+            };
+        }
     }
 
     _inferProviderFromConfig(key, model) {
         const normalizedKey = (key || '').trim();
         const normalizedModel = (model || '').trim().toLowerCase();
 
+        if (normalizedKey.startsWith('sk-ant-')) {
+            return 'anthropic';
+        }
+
         if (normalizedKey.startsWith('sk-or-')) {
             return 'openrouter';
+        }
+
+        if (normalizedModel.includes('claude') || normalizedModel.includes('opus') || normalizedModel.includes('sonnet') || normalizedModel.includes('haiku')) {
+            return 'anthropic';
         }
 
         if (normalizedModel.includes('/') || normalizedModel.includes('openrouter') || normalizedModel.includes('openai/')) {
@@ -528,17 +553,15 @@ Cliente: “ja reiniciei e continua travando”
         return this.provider || this._detectProvider();
     }
 
-    async _callAIProvider(message, sensorData, context = {}, history = []) {
+    _buildSystemContent(message, sensorData, context, history) {
         let systemContent = this.systemPrompt;
         const vocabularyLevel = this._inferVocabularyLevel(message, context, history);
         systemContent += this._vocabularyContext(vocabularyLevel);
 
-        // Injeta perfil real do dispositivo se disponível
         if (context.device) {
             systemContent += this._deviceProfileContext(context.device);
         }
 
-        // Verifica se há dispositivo conectado com dados reais
         const hasDevice = sensorData && (sensorData.cpu > 0 || sensorData.ram > 0 || sensorData.battery.level > 0);
 
         if (hasDevice) {
@@ -551,6 +574,84 @@ Cliente: “ja reiniciei e continua travando”
             systemContent += `\n\n[MODO DA SESSÃO]\n${context.mode || 'diagnostic'}`;
         }
 
+        return systemContent;
+    }
+
+    async _callAIProvider(message, sensorData, context = {}, history = []) {
+        const systemContent = this._buildSystemContent(message, sensorData, context, history);
+
+        if (this.provider === 'anthropic') {
+            return this._callAnthropic(systemContent, history);
+        }
+
+        return this._callOpenAICompatible(systemContent, history);
+    }
+
+    async _callAnthropic(systemContent, history) {
+        const messages = history.slice(-4).map(m => ({
+            role: m.role,
+            content: m.content
+        }));
+
+        const body = {
+            model: this.model,
+            max_tokens: 1024,
+            system: systemContent,
+            messages
+        };
+
+        return new Promise((resolve, reject) => {
+            const data = JSON.stringify(body);
+            const baseUrl = new URL(this.apiBaseUrl);
+
+            const options = {
+                hostname: baseUrl.hostname,
+                port: baseUrl.port ? parseInt(baseUrl.port, 10) : 443,
+                path: '/v1/messages',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': this.apiKey,
+                    'anthropic-version': ANTHROPIC_API_VERSION,
+                    'Content-Length': Buffer.byteLength(data)
+                }
+            };
+
+            console.log(`[AI] Calling ${this.providerLabel} (${this.model})...`);
+
+            const req = https.request(options, (res) => {
+                let body = '';
+                res.on('data', c => body += c);
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        try {
+                            const json = JSON.parse(body);
+                            // Anthropic Messages API: content is an array of blocks
+                            const textBlocks = json.content.filter(b => b.type === 'text');
+                            const content = textBlocks.map(b => b.text).join('');
+
+                            if (json.usage) {
+                                console.log(`[AI] Tokens — input: ${json.usage.input_tokens}, output: ${json.usage.output_tokens}`);
+                            }
+
+                            resolve(content);
+                        } catch (e) {
+                            reject(new Error('Parse error: ' + body.substring(0, 200)));
+                        }
+                    } else {
+                        reject(new Error(`HTTP ${res.statusCode}: ${body.substring(0, 300)}`));
+                    }
+                });
+            });
+
+            req.on('error', reject);
+            req.setTimeout(300000, () => { req.destroy(); reject(new Error('API timeout (>5min) - resposta demorou demais')); });
+            req.write(data);
+            req.end();
+        });
+    }
+
+    async _callOpenAICompatible(systemContent, history) {
         const messages = [
             { role: 'system', content: systemContent },
             ...history.slice(-4)
@@ -567,7 +668,7 @@ Cliente: “ja reiniciei e continua travando”
             const data = JSON.stringify(body);
             const baseUrl = new URL(this.apiBaseUrl);
             const path = `${baseUrl.pathname.replace(/\/$/, '')}/chat/completions`;
-            
+
             const options = {
                 hostname: baseUrl.hostname,
                 port: baseUrl.port ? parseInt(baseUrl.port, 10) : 443,
@@ -591,13 +692,12 @@ Cliente: “ja reiniciei e continua travando”
                         try {
                             const json = JSON.parse(body);
                             let content = json.choices[0].message.content;
-                            
-                            // Algumas APIs podem incluir reasoning_content
+
                             const reasoning = json.choices[0].message.reasoning_content;
                             if (reasoning && reasoning.length > 0) {
                                 console.log('[AI] Reasoning tokens used:', reasoning.length);
                             }
-                            
+
                             resolve(content);
                         } catch (e) {
                             reject(new Error('Parse error: ' + body.substring(0, 200)));
@@ -609,7 +709,7 @@ Cliente: “ja reiniciei e continua travando”
             });
 
             req.on('error', reject);
-            req.setTimeout(300000, () => { req.destroy(); reject(new Error('API timeout (>5min) - resposta demorou demais')) });
+            req.setTimeout(300000, () => { req.destroy(); reject(new Error('API timeout (>5min) - resposta demorou demais')); });
             req.write(data);
             req.end();
         });
@@ -710,44 +810,44 @@ Wi-Fi: ${s.wifi ? 'Conectado' : 'Desconectado'} | Bluetooth: ${s.bluetooth ? 'At
         return `Problemas detectados: ${issues.join(' · ')}.`;
     }
 
-    setApiKey(key, model = null) { 
+    setApiKey(key, model = null) {
         this.provider = this._inferProviderFromConfig(key, model || this.model);
-        this.apiKey = key; 
+        this.apiKey = key;
         if (model) {
             this.model = model;
-        } else if (!this.model || this.model === DEFAULT_DEEPSEEK_MODEL || this.model === DEFAULT_OPENROUTER_MODEL) {
-            this.model = this.provider === 'deepseek'
-                ? DEFAULT_DEEPSEEK_MODEL
-                : DEFAULT_OPENROUTER_MODEL;
+        } else if (!this.model || this.model === DEFAULT_DEEPSEEK_MODEL || this.model === DEFAULT_OPENROUTER_MODEL || this.model === DEFAULT_ANTHROPIC_MODEL) {
+            if (this.provider === 'anthropic') this.model = DEFAULT_ANTHROPIC_MODEL;
+            else if (this.provider === 'deepseek') this.model = DEFAULT_DEEPSEEK_MODEL;
+            else this.model = DEFAULT_OPENROUTER_MODEL;
         }
-        this.apiBaseUrl = this.provider === 'deepseek'
-            ? (process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com')
-            : (process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1');
-        this.providerLabel = this.provider === 'deepseek' ? 'DeepSeek' : 'OpenRouter';
-        this.extraHeaders = this.provider === 'deepseek'
-            ? {}
-            : {
-                'HTTP-Referer': process.env.OPENROUTER_REFERER || 'http://localhost:3001',
-                'X-Title': process.env.OPENROUTER_APP_NAME || 'AION Repair OS'
-            };
+        this._applyProviderUrls();
         console.log(`[AI] API key configured for ${this.providerLabel}`);
     }
 
     setModel(model) {
         if (!model) return;
-
         this.model = model;
         this.provider = this._inferProviderFromConfig(this.apiKey || '', model);
-        this.apiBaseUrl = this.provider === 'deepseek'
-            ? (process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com')
-            : (process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1');
-        this.providerLabel = this.provider === 'deepseek' ? 'DeepSeek' : 'OpenRouter';
-        this.extraHeaders = this.provider === 'deepseek'
-            ? {}
-            : {
+        this._applyProviderUrls();
+    }
+
+    _applyProviderUrls() {
+        if (this.provider === 'anthropic') {
+            this.apiBaseUrl = process.env.ANTHROPIC_API_BASE_URL || 'https://api.anthropic.com';
+            this.providerLabel = 'Anthropic';
+            this.extraHeaders = {};
+        } else if (this.provider === 'deepseek') {
+            this.apiBaseUrl = process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com';
+            this.providerLabel = 'DeepSeek';
+            this.extraHeaders = {};
+        } else {
+            this.apiBaseUrl = process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1';
+            this.providerLabel = 'OpenRouter';
+            this.extraHeaders = {
                 'HTTP-Referer': process.env.OPENROUTER_REFERER || 'http://localhost:3001',
                 'X-Title': process.env.OPENROUTER_APP_NAME || 'AION Repair OS'
             };
+        }
     }
     clearSessionHistory(sessionId) {
         if (sessionId) this.histories.delete(sessionId);

@@ -492,199 +492,110 @@ body::after {
 .feed-item.warning { border-left-color: rgba(255, 111, 147, 0.58); }
 .feed-item.session { border-left-color: rgba(92, 243, 180, 0.58); }
 
-.device-showcase {
-    padding: 12px 16px 12px;
+.terminal-device-bar {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(93, 129, 255, 0.14);
+    background: linear-gradient(180deg, rgba(10, 16, 30, 0.90), rgba(6, 10, 18, 0.94));
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: var(--muted);
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.device-frame {
-    position: relative;
-    min-height: 360px;
-    padding: 18px 18px 96px;
-    border: 1px solid rgba(93, 129, 255, 0.20);
-    background:
-        radial-gradient(circle at 50% 0%, rgba(54, 248, 255, 0.16), transparent 36%),
-        radial-gradient(circle at 18% 20%, rgba(54, 248, 255, 0.14), transparent 28%),
-        radial-gradient(circle at 80% 26%, rgba(172, 109, 255, 0.18), transparent 38%),
-        linear-gradient(180deg, rgba(13, 19, 34, 0.98), rgba(5, 8, 14, 0.99));
-    overflow: hidden;
-    display: grid;
-    place-items: center;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 48px rgba(54, 248, 255, 0.06);
-}
-
-.device-frame::before {
-    content: "";
-    position: absolute;
-    inset: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    pointer-events: none;
-}
-
-.device-frame::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        linear-gradient(180deg, rgba(255,255,255,0.08), transparent 16%),
-        linear-gradient(90deg, rgba(255,255,255,0.02), transparent 18%, transparent 82%, rgba(255,255,255,0.02)),
-        linear-gradient(180deg, transparent 0%, transparent 48%, rgba(54, 248, 255, 0.08) 49%, transparent 51%, transparent 100%);
-    pointer-events: none;
-}
-
-.device-frame img {
-    position: relative;
-    z-index: 1;
-    width: min(86%, 360px);
-    max-height: 430px;
-    object-fit: contain;
-    filter: drop-shadow(0 30px 50px rgba(0, 0, 0, 0.55)) saturate(1.02);
-    opacity: 0;
-    transform: translateY(12px) scale(0.98);
-    transition: opacity 360ms ease, transform 360ms ease;
-}
-
-.device-frame img.is-loaded {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-}
-
-.device-frame.fallback img {
-    width: min(90%, 380px);
-}
-
-.device-frame .device-overlay {
-    position: absolute;
-    left: 14px;
-    right: 14px;
-    bottom: 14px;
-    z-index: 2;
-    display: grid;
-    gap: 5px;
-    padding: 12px 14px 11px;
-    background: linear-gradient(180deg, rgba(5, 8, 14, 0.60), rgba(5, 8, 14, 0.94));
-    border: 1px solid rgba(54, 248, 255, 0.16);
-    backdrop-filter: blur(16px);
-    box-shadow: 0 18px 30px rgba(0, 0, 0, 0.24);
-}
-
-.device-stage-kicker {
-    display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-family: "Sora", sans-serif;
-    font-size: 10px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--accent);
+    letter-spacing: 0.04em;
 }
 
-.device-stage-kicker::before {
-    content: "";
-    width: 8px;
-    height: 8px;
+.terminal-device-bar .device-dot {
+    width: 7px;
+    height: 7px;
     border-radius: 999px;
-    background: linear-gradient(180deg, var(--accent), rgba(54, 248, 255, 0.32));
-    box-shadow: 0 0 0 4px rgba(54, 248, 255, 0.08);
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(54, 248, 255, 0.4);
+    flex: none;
 }
 
-.device-stage-title {
-    font-family: "Sora", sans-serif;
-    font-size: clamp(1.3rem, 2vw, 1.75rem);
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1.05;
-    text-shadow: 0 0 16px rgba(172, 109, 255, 0.14);
+.terminal-device-bar .device-dot.offline {
+    background: var(--muted);
+    box-shadow: none;
 }
 
-.device-stage-meta,
-.device-stage-source {
-    color: rgba(232, 238, 251, 0.84);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 11px;
-    line-height: 1.4;
-}
-
-.device-stage-source {
-    color: var(--muted);
-}
-
-.device-spec-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0;
-    border: 1px solid rgba(93, 129, 255, 0.16);
-    background: linear-gradient(180deg, rgba(9, 14, 25, 0.95), rgba(6, 10, 18, 0.98));
+.terminal-device-bar span.device-bar-text {
+    color: var(--text);
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.spec-card {
-    padding: 12px 12px 11px;
-    border-right: 1px solid rgba(93, 129, 255, 0.10);
-    border-bottom: 1px solid rgba(93, 129, 255, 0.10);
-    background: transparent;
-    min-width: 0;
+.terminal-stream {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 10px 14px 10px;
+    background: rgba(2, 4, 8, 0.65);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    line-height: 1.55;
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    flex-direction: column;
+    gap: 0;
 }
 
-.spec-card:nth-child(2n) { border-right: 0; }
-.spec-card:nth-last-child(-n + 2) { border-bottom: 0; }
+.terminal-stream::-webkit-scrollbar { width: 6px; }
+.terminal-stream::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(54, 248, 255, 0.38), rgba(172, 109, 255, 0.38));
+    border-radius: 999px;
+}
+.terminal-stream::-webkit-scrollbar-track { background: transparent; }
 
-.spec-card .label {
-    display: block;
-    font-family: "Sora", sans-serif;
-    font-size: 9px;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: var(--muted);
+.terminal-entry {
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(93, 129, 255, 0.06);
+}
+
+.terminal-entry:last-child {
+    border-bottom: none;
+}
+
+.terminal-ts {
+    color: rgba(141, 159, 190, 0.55);
+    font-size: 10px;
+    margin-right: 6px;
+    user-select: none;
+}
+
+.terminal-cmd {
+    color: var(--accent);
+    word-break: break-all;
+}
+
+.terminal-cmd .terminal-prompt {
+    color: var(--good);
+    margin-right: 4px;
+}
+
+.terminal-output {
+    color: rgba(237, 244, 255, 0.62);
+    font-size: 11.5px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding-left: 18px;
     margin-top: 2px;
 }
 
-.spec-card .value {
-    display: block;
-    margin-top: 0;
-    color: #f3f6ff;
-    font-family: "JetBrains Mono", monospace;
-    font-size: 13px;
-    line-height: 1.28;
-    word-break: break-word;
-    text-align: right;
+.terminal-error {
+    color: var(--danger);
 }
 
-.device-footer {
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0;
-    border: 1px solid rgba(93, 129, 255, 0.16);
-    background: linear-gradient(180deg, rgba(9, 14, 25, 0.92), rgba(6, 10, 18, 0.96));
+.terminal-event {
     color: var(--muted);
-    font-size: 12px;
-}
-
-.device-footer .kv {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 3px;
-    min-width: 0;
-    padding: 10px 12px 11px;
-    border-right: 1px solid rgba(93, 129, 255, 0.10);
-    border-bottom: 1px solid rgba(93, 129, 255, 0.10);
-}
-
-.device-footer .kv:nth-child(4n) { border-right: 0; }
-.device-footer .kv span:last-child {
-    color: var(--text);
-    font-family: "JetBrains Mono", monospace;
     font-size: 11px;
-    line-height: 1.35;
+    font-style: italic;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(93, 129, 255, 0.06);
+}
+
+.terminal-event .terminal-ts {
+    font-style: normal;
 }
 
 .scrollbar::-webkit-scrollbar,
@@ -719,11 +630,6 @@ body::after {
     .workspace { grid-template-columns: 1fr; }
     .panel { min-height: 320px; }
     .activity-panel { grid-column: auto; }
-    .device-spec-grid { grid-template-columns: 1fr; }
-    .device-footer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .spec-card { border-right: 0; }
-    .spec-card:not(:last-child) { border-bottom: 1px solid rgba(168, 182, 255, 0.09); }
-    .spec-card:last-child { border-bottom: 0; }
 }
 </style>
 </head>
@@ -794,73 +700,15 @@ body::after {
 
         <section class="panel activity-panel">
             <div class="panel-head">
-                <div class="panel-kicker">Dispositivo</div>
-                <div class="panel-note">Imagem, leituras e auditoria em tempo real</div>
+                <div class="panel-kicker">Terminal</div>
+                <div class="panel-note">Comandos executados pelo agente em tempo real</div>
             </div>
-            <div class="device-showcase">
-                <div id="device-frame" class="device-frame fallback">
-                    <img id="device-image" alt="Imagem do modelo do aparelho" />
-                    <div class="device-overlay">
-                        <div class="device-stage-kicker">Modelo reconhecido</div>
-                        <div class="device-stage-title" id="device-stage-title">Aguardando dispositivo</div>
-                        <div class="device-stage-meta" id="device-stage-meta">Conecte o telefone para exibir o perfil completo.</div>
-                        <div class="device-stage-source" id="device-stage-source">Imagem local até o perfil ser resolvido.</div>
-                    </div>
-                </div>
-                <div class="device-spec-grid">
-                    <div class="spec-card">
-                        <span class="label">Marca</span>
-                        <span class="value" id="spec-brand">--</span>
-                    </div>
-                    <div class="spec-card">
-                        <span class="label">Modelo</span>
-                        <span class="value" id="spec-model">--</span>
-                    </div>
-                    <div class="spec-card">
-                        <span class="label">Serial</span>
-                        <span class="value" id="spec-serial">--</span>
-                    </div>
-                    <div class="spec-card">
-                        <span class="label">RAM</span>
-                        <span class="value" id="spec-ram">--</span>
-                    </div>
-                    <div class="spec-card">
-                        <span class="label">ROM</span>
-                        <span class="value" id="spec-rom">--</span>
-                    </div>
-                    <div class="spec-card">
-                        <span class="label">Chipset</span>
-                        <span class="value" id="spec-chipset">--</span>
-                    </div>
-                    <div class="spec-card">
-                        <span class="label">Android</span>
-                        <span class="value" id="spec-android">--</span>
-                    </div>
-                    <div class="spec-card">
-                        <span class="label">Build</span>
-                        <span class="value" id="spec-build">--</span>
-                    </div>
-                </div>
+            <div class="terminal-device-bar">
+                <div class="device-dot offline" id="device-dot"></div>
+                <span class="device-bar-text" id="device-bar-text">Aguardando dispositivo</span>
             </div>
-            <div class="device-footer">
-                <div class="kv">
-                    <span>Board</span>
-                    <span id="device-board">--</span>
-                </div>
-                <div class="kv">
-                    <span>Product</span>
-                    <span id="device-product">--</span>
-                </div>
-                <div class="kv">
-                    <span>API</span>
-                    <span id="device-sdk">--</span>
-                </div>
-                <div class="kv">
-                    <span>Imagem</span>
-                    <span id="device-image-source">--</span>
-                </div>
-            </div>
-            <div id="activity-stream" class="activity-stream scrollbar"></div>
+            <div id="terminal-stream" class="terminal-stream"></div>
+            <div id="activity-stream" class="activity-stream scrollbar" style="display:none"></div>
         </section>
     </main>
 </div>
@@ -968,7 +816,6 @@ const auditLimit = 80;
 
 document.addEventListener('DOMContentLoaded', async () => {
     renderSensorSkeleton();
-    wireDeviceFrame();
     document.getElementById('chat-form').addEventListener('submit', handleChatSubmit);
 
     // Check if auth is required
@@ -992,28 +839,6 @@ function bootApp() {
     state.devicePollTimer = setInterval(refreshDevices, 3000);
     state.auditPollTimer = setInterval(refreshAudit, 4000);
     document.getElementById('chat-input').focus();
-}
-
-function wireDeviceFrame() {
-    const image = document.getElementById('device-image');
-    const frame = document.getElementById('device-frame');
-
-    image.addEventListener('load', () => {
-        image.classList.add('is-loaded');
-        frame.classList.toggle('fallback', image.dataset.source !== 'exact');
-    });
-
-    image.addEventListener('error', () => {
-        const fallback = image.dataset.fallback;
-        if (!fallback || image.dataset.source === 'fallback' || image.src === fallback) {
-            return;
-        }
-
-        image.dataset.source = 'fallback';
-        frame.classList.add('fallback');
-        document.getElementById('device-stage-source').textContent = 'Visual local de fallback.';
-        image.src = fallback;
-    });
 }
 
 function renderSensorSkeleton() {
@@ -1094,17 +919,18 @@ function handleSocketMessage(message) {
             break;
         case 'device_disconnected':
             appendActivity('SESSION', 'Dispositivo desconectado', `ID: ${message.deviceId}`);
+            appendTerminal('', `Dispositivo desconectado: ${message.deviceId}`, 'LOW', true);
             state.currentDevice = null;
             state.deviceInfo = null;
             state.sessionId = null;
             state.sessionActive = false;
             setSessionChip('Sessão inativa');
-            updateDeviceOverview(null);
+            updateDeviceBar(null);
             updateDeviceChip([]);
             setBrandSubtitle('Aguardando um telefone USB autorizado no ADB.');
             break;
         case 'adb_log':
-            appendActivity('COMMAND', `Comando executado · ${message.risk || 'LOW'}`, `> ${message.command}\n${message.result || ''}`);
+            appendTerminal(message.command, message.result || '', message.risk || 'LOW');
             break;
         case 'action_executed':
             appendActivity('COMMAND', `Ação aceita · ${message.riskLevel || 'LOW'}`, JSON.stringify(message.result, null, 2));
@@ -1136,7 +962,7 @@ async function refreshDevices() {
             state.sessionId = null;
             state.sessionActive = false;
             setSessionChip('Sessão inativa');
-            updateDeviceOverview(null);
+            updateDeviceBar(null);
         }
         setBrandSubtitle('Aguardando um telefone USB autorizado no ADB.');
         return;
@@ -1352,7 +1178,7 @@ function cancelPendingAction(message) {
 }
 
 async function performAction(command, risk) {
-    appendActivity('COMMAND', `Executando · ${risk}`, `> ${command}`);
+    appendTerminal(command, 'Executando...', risk);
 
     try {
         const response = await fetch('/api/execute', {
@@ -1366,16 +1192,13 @@ async function performAction(command, risk) {
 
         const data = await response.json();
         if (!response.ok) {
-            appendActivity('WARNING', `Execução bloqueada · ${risk}`, data.reason || data.error || 'Sem motivo informado');
-            appendChat('AION', `Comando bloqueado: ${data.reason || data.error || 'política do backend'}.`, 'system');
+            appendTerminal(command, data.reason || data.error || 'Bloqueado pela política do backend', risk, true);
             return;
         }
 
-        appendActivity('COMMAND', `Resultado · ${risk}`, data.result || '(sem saída)');
-        appendChat('AION', `Comando concluído: \`${command}\`\n\n${data.result || 'Sem saída textual.'}`, 'agent');
+        appendTerminal(command, data.result || '(sem saída)', risk);
     } catch (err) {
-        appendActivity('WARNING', 'Falha na execução', err.message);
-        appendChat('AION', `Falha ao executar \`${command}\`: ${err.message}`, 'system');
+        appendTerminal(command, `Erro: ${err.message}`, risk, true);
     }
 }
 
@@ -1425,6 +1248,59 @@ function appendActivity(kind, title, body) {
     item.append(meta, titleNode, bodyNode);
     stream.appendChild(item);
     stream.scrollTop = stream.scrollHeight;
+
+    // Mirror system/session/audit events to terminal as subtle event lines
+    const terminalStream = document.getElementById('terminal-stream');
+    if (terminalStream && kind !== 'COMMAND' && kind !== 'WARNING') {
+        const now = new Date();
+        const ts = `[${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}]`;
+        const ev = document.createElement('div');
+        ev.className = 'terminal-event';
+        ev.innerHTML = `<span class="terminal-ts">${ts}</span> ${escapeHtml(title)}`;
+        terminalStream.appendChild(ev);
+        terminalStream.scrollTop = terminalStream.scrollHeight;
+    }
+}
+
+function appendTerminal(command, output, risk, isError) {
+    const stream = document.getElementById('terminal-stream');
+    const entry = document.createElement('div');
+    entry.className = 'terminal-entry';
+
+    const now = new Date();
+    const ts = `[${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}]`;
+
+    if (command) {
+        const cmdLine = document.createElement('div');
+        cmdLine.className = 'terminal-cmd';
+        cmdLine.innerHTML = `<span class="terminal-ts">${ts}</span><span class="terminal-prompt">$</span> ${escapeHtml(command)}`;
+        entry.appendChild(cmdLine);
+    }
+
+    if (output) {
+        const outLine = document.createElement('div');
+        outLine.className = isError ? 'terminal-output terminal-error' : 'terminal-output';
+        if (!command) {
+            outLine.innerHTML = `<span class="terminal-ts">${ts}</span>${escapeHtml(output)}`;
+            outLine.style.paddingLeft = '0';
+        } else {
+            outLine.textContent = output;
+        }
+        entry.appendChild(outLine);
+    }
+
+    stream.appendChild(entry);
+    stream.scrollTop = stream.scrollHeight;
+
+    // Also feed to hidden activity stream for compatibility
+    const kind = isError ? 'WARNING' : 'COMMAND';
+    appendActivity(kind, command || 'Evento', output || '');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function updateTelemetry(sensorData) {
@@ -1496,94 +1372,30 @@ function setComposerHint(text) {
     document.getElementById('composer-hint').textContent = text;
 }
 
-function updateDeviceOverview(device) {
-    const elements = {
-        stageTitle: document.getElementById('device-stage-title'),
-        stageMeta: document.getElementById('device-stage-meta'),
-        stageSource: document.getElementById('device-stage-source'),
-        image: document.getElementById('device-image'),
-        frame: document.getElementById('device-frame'),
-        brand: document.getElementById('spec-brand'),
-        model: document.getElementById('spec-model'),
-        serial: document.getElementById('spec-serial'),
-        ram: document.getElementById('spec-ram'),
-        rom: document.getElementById('spec-rom'),
-        chipset: document.getElementById('spec-chipset'),
-        android: document.getElementById('spec-android'),
-        build: document.getElementById('spec-build'),
-        board: document.getElementById('device-board'),
-        product: document.getElementById('device-product'),
-        sdk: document.getElementById('device-sdk'),
-        imageSource: document.getElementById('device-image-source')
-    };
+function updateDeviceBar(device) {
+    const dot = document.getElementById('device-dot');
+    const text = document.getElementById('device-bar-text');
 
     if (!device) {
-        elements.stageTitle.textContent = 'Aguardando dispositivo';
-        elements.stageMeta.textContent = 'Conecte o telefone para exibir o perfil completo.';
-        elements.stageSource.textContent = 'Imagem local até o perfil ser resolvido.';
-        elements.brand.textContent = '--';
-        elements.model.textContent = '--';
-        elements.serial.textContent = '--';
-        elements.ram.textContent = '--';
-        elements.rom.textContent = '--';
-        elements.chipset.textContent = '--';
-        elements.android.textContent = '--';
-        elements.build.textContent = '--';
-        elements.board.textContent = '--';
-        elements.product.textContent = '--';
-        elements.sdk.textContent = '--';
-        elements.imageSource.textContent = '--';
-        elements.image.dataset.source = 'fallback';
-        elements.image.dataset.fallback = '';
-        elements.image.removeAttribute('src');
-        elements.image.classList.remove('is-loaded');
-        elements.frame.classList.add('fallback');
+        dot.classList.add('offline');
+        text.textContent = 'Aguardando dispositivo';
         return;
     }
 
-    const displayName = device.displayName || [device.brand, device.model].filter(Boolean).join(' ').trim() || device.model || device.brand || device.id || 'Unknown device';
-    const ramText = device.ramDisplay || formatMemoryGb(device.ramTotalMb);
-    const romText = device.storageDisplay || formatStorageGb(device.storageTotalGb, device.storageUsedPercent);
-    const metaParts = [
-        device.serial ? `Serial ${device.serial}` : '',
-        ramText !== '--' ? `RAM ${ramText}` : '',
-        romText !== '--' ? `ROM ${romText}` : '',
-        device.androidSdk ? `API ${device.androidSdk}` : ''
+    dot.classList.remove('offline');
+    const displayName = device.displayName || [device.brand, device.model].filter(Boolean).join(' ').trim() || device.id || 'Unknown';
+    const parts = [
+        displayName,
+        device.android ? `Android ${device.android}` : '',
+        device.serial || device.id || ''
     ].filter(Boolean);
-
-    elements.stageTitle.textContent = displayName;
-    elements.stageMeta.textContent = metaParts.join(' · ');
-    elements.stageSource.textContent = device.imageResolved
-        ? `Imagem exata: ${formatImageSource(device.imageSource)}`
-        : 'Visual local de fallback enquanto a foto exata carrega.';
-    elements.image.dataset.source = device.imageResolved ? 'exact' : 'fallback';
-    elements.image.dataset.fallback = device.fallbackImageUrl || device.imageUrl || '';
-    elements.image.alt = `Imagem do modelo ${displayName}`;
-    elements.image.classList.remove('is-loaded');
-    elements.image.src = device.imageUrl || device.fallbackImageUrl || '';
-    if (elements.image.complete && elements.image.naturalWidth > 0) {
-        elements.image.classList.add('is-loaded');
-    }
-    elements.frame.classList.toggle('fallback', !device.imageResolved);
-
-    elements.brand.textContent = device.brand || device.manufacturer || '--';
-    elements.model.textContent = device.model || '--';
-    elements.serial.textContent = device.serial || device.id || '--';
-    elements.ram.textContent = ramText;
-    elements.rom.textContent = romText;
-    elements.chipset.textContent = device.chipset || '--';
-    elements.android.textContent = device.android ? `Android ${device.android}` : '--';
-    elements.build.textContent = device.buildId || device.securityPatch || '--';
-    elements.board.textContent = device.board || '--';
-    elements.product.textContent = device.product || '--';
-    elements.sdk.textContent = device.androidSdk ? `API ${device.androidSdk}` : '--';
-    elements.imageSource.textContent = device.imageResolved ? formatImageSource(device.imageSource) : 'Fallback local';
+    text.textContent = parts.join('  |  ');
 }
 
 function applyDeviceInfo(device) {
     state.currentDevice = device.id;
     state.deviceInfo = device;
-    updateDeviceOverview(device);
+    updateDeviceBar(device);
     document.getElementById('device-chip-text').textContent = `${device.displayName || device.model || device.id}`;
 }
 
@@ -1610,21 +1422,6 @@ function formatStorageGb(totalGb, usedPercent) {
     if (!totalGb) return '--';
     const freeGb = usedPercent >= 0 ? Number((totalGb * (1 - (usedPercent / 100))).toFixed(totalGb >= 10 ? 0 : 1)) : null;
     return freeGb !== null ? `${totalGb} GB total · ${freeGb} GB livre` : `${totalGb} GB`;
-}
-
-function formatImageSource(source) {
-    switch (source) {
-        case 'wikimedia-commons':
-            return 'Wikimedia Commons';
-        case 'wikidata':
-            return 'Wikidata';
-        case 'gsmarena':
-            return 'GSMArena';
-        case 'local-fallback':
-            return 'Fallback local';
-        default:
-            return source || 'lookup';
-    }
 }
 
 function normalizeAction(action) {

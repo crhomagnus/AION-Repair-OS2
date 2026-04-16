@@ -510,9 +510,6 @@ class SkillRunner {
         const errors = [];
         const deadline = startTime + SKILL_TIMEOUT;
 
-        // Broadcast skill start
-        this.broadcast({ type: 'adb_log', command: `[SKILL] ${skillName}`, result: skill.description, risk: 'LOW' });
-
         for (const { key, cmd } of skill.commands) {
             if (Date.now() > deadline) {
                 errors.push({ key, error: 'Timeout global da skill atingido' });
@@ -525,18 +522,18 @@ class SkillRunner {
                 continue;
             }
 
-            // Broadcast command start in real-time
-            this.broadcast({ type: 'adb_log', command: cmd, result: '...', risk: validation.risk });
+            // Broadcast: command started, waiting for device response
+            this.broadcast({ type: 'cmd_start', command: cmd });
 
             try {
                 const output = await this.adb.execute(cmd);
                 details[key] = this._truncate(output, 1500);
-                // Broadcast command result
-                this.broadcast({ type: 'adb_log', command: cmd, result: this._truncate(output, 300), risk: validation.risk });
+                // Broadcast: command result received
+                this.broadcast({ type: 'cmd_result', command: cmd, result: this._truncate(output, 300) });
             } catch (err) {
                 errors.push({ key, error: err.message });
                 details[key] = null;
-                this.broadcast({ type: 'adb_log', command: cmd, result: `ERRO: ${err.message}`, risk: 'HIGH' });
+                this.broadcast({ type: 'cmd_result', command: cmd, result: `ERRO: ${err.message}`, isError: true });
             }
         }
 

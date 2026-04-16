@@ -404,19 +404,19 @@ Cliente: “ja reiniciei e continua travando”
             }
             if (validation.risk !== 'LOW') {
                 // MEDIUM/HIGH: don't auto-execute, return to frontend for confirmation
-                this.broadcast({ type: 'adb_log', command: cmd, result: `⏳ Aguardando autorização do cliente (${validation.risk})`, risk: validation.risk });
+                this.broadcast({ type: 'cmd_pending', command: cmd, risk: validation.risk });
                 results.push({ type: action.type, command: cmd, result: null, risk: validation.risk, reason: action.reason || validation.reason, pendingFrontend: true });
                 continue;
             }
-            // LOW risk: broadcast and execute
-            this.broadcast({ type: 'adb_log', command: cmd, result: '...', risk: 'LOW' });
+            // LOW risk: broadcast start, execute, broadcast result
+            this.broadcast({ type: 'cmd_start', command: cmd });
             try {
                 const output = await this.adb.execute(cmd);
                 const truncated = this._truncateToolResult(action.type, output);
-                this.broadcast({ type: 'adb_log', command: cmd, result: this._truncateToolResult(action.type, output).substring(0, 300), risk: 'LOW' });
+                this.broadcast({ type: 'cmd_result', command: cmd, result: truncated.substring(0, 300) });
                 results.push({ type: action.type, result: truncated, error: false });
             } catch (err) {
-                this.broadcast({ type: 'adb_log', command: cmd, result: `ERRO: ${err.message}`, risk: 'HIGH' });
+                this.broadcast({ type: 'cmd_result', command: cmd, result: `ERRO: ${err.message}`, isError: true });
                 results.push({ type: action.type, result: `Erro: ${err.message}`, error: true });
             }
         }

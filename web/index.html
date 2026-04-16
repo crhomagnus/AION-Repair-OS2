@@ -586,6 +586,27 @@ body::after {
     color: var(--danger);
 }
 
+.terminal-waiting {
+    color: var(--accent);
+    font-size: 11px;
+    font-style: italic;
+    padding-left: 18px;
+    opacity: 0.7;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.terminal-pending {
+    color: var(--warn);
+    font-size: 11px;
+    font-style: italic;
+    padding-left: 18px;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+
 .terminal-event {
     color: var(--muted);
     font-size: 11px;
@@ -929,10 +950,18 @@ function handleSocketMessage(message) {
             setBrandSubtitle('Aguardando um telefone USB autorizado no ADB.');
             break;
         case 'adb_log':
-            appendTerminal(message.command, message.result || '', message.risk || 'LOW');
+            appendTerminal(message.command, message.result || '');
+            break;
+        case 'cmd_start':
+            appendTerminalCmd(message.command);
+            break;
+        case 'cmd_result':
+            appendTerminalResult(message.command, message.result || '', message.isError);
+            break;
+        case 'cmd_pending':
+            appendTerminalPending(message.command);
             break;
         case 'action_executed':
-            appendActivity('COMMAND', `Ação aceita · ${message.riskLevel || 'LOW'}`, JSON.stringify(message.result, null, 2));
             break;
         case 'chat_response':
             // Chat replies are handled by the REST flow to keep the stream ordered.
@@ -1192,7 +1221,7 @@ function cancelPendingAction(message) {
 }
 
 async function performAction(command, risk) {
-    appendTerminal(command, 'Executando...', risk);
+    appendTerminalCmd(command);
 
     try {
         const response = await fetch('/api/execute', {
@@ -1206,13 +1235,13 @@ async function performAction(command, risk) {
 
         const data = await response.json();
         if (!response.ok) {
-            appendTerminal(command, data.reason || data.error || 'Bloqueado pela política do backend', risk, true);
+            appendTerminalResult(command, data.reason || data.error || 'Erro na execução', true);
             return;
         }
 
-        appendTerminal(command, data.result || '(sem saída)', risk);
+        appendTerminalResult(command, data.result || '(sem saída)');
     } catch (err) {
-        appendTerminal(command, `Erro: ${err.message}`, risk, true);
+        appendTerminalResult(command, `Erro: ${err.message}`, true);
     }
 }
 
@@ -1276,39 +1305,97 @@ function appendActivity(kind, title, body) {
     }
 }
 
-function appendTerminal(command, output, risk, isError) {
+// Show command being sent — with "lendo resposta do aparelho..."
+function appendTerminalCmd(command) {
+    const stream = document.getElementById('terminal-stream');
+    const entry = document.createElement('div');
+    entry.className = 'terminal-entry';
+    entry.dataset.cmd = command;
+
+    const cmdLine = document.createElement('div');
+    cmdLine.className = 'terminal-cmd';
+    cmdLine.innerHTML = `<span class="terminal-prompt">$</span> ${escapeHtml(command)}`;
+    entry.appendChild(cmdLine);
+
+    const waiting = document.createElement('div');
+    waiting.className = 'terminal-waiting';
+    waiting.textContent = 'lendo resposta do aparelho...';
+    entry.appendChild(waiting);
+
+    stream.appendChild(entry);
+    stream.scrollTop = stream.scrollHeight;
+}
+
+// Replace "lendo resposta..." with actual result
+function appendTerminalResult(command, output, isError) {
+    const stream = document.getElementById('terminal-stream');
+    // Find the last matching entry with waiting state
+    const entries = stream.querySelectorAll(`.terminal-entry[data-cmd="${CSS.escape(command)}"]`);
+    let entry = null;
+    for (const e of entries) {
+        if (e.querySelector('.terminal-waiting')) { entry = e; break; }
+    }
+
+    if (entry) {
+        // Remove waiting message and add result
+        const waiting = entry.querySelector('.terminal-waiting');
+        if (waiting) waiting.remove();
+
+        if (output && output !== '...') {
+            const outLine = document.createElement('div');
+            outLine.className = isError ? 'terminal-output terminal-error' : 'terminal-output';
+            outLine.textContent = output;
+            entry.appendChild(outLine);
+        }
+    } else {
+        // Fallback: create new entry if no matching start found
+        appendTerminal(command, output, isError);
+    }
+    stream.scrollTop = stream.scrollHeight;
+}
+
+// Show command waiting for user authorization
+function appendTerminalPending(command) {
     const stream = document.getElementById('terminal-stream');
     const entry = document.createElement('div');
     entry.className = 'terminal-entry';
 
-    const now = new Date();
-    const ts = `[${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}]`;
+    const cmdLine = document.createElement('div');
+    cmdLine.className = 'terminal-cmd';
+    cmdLine.innerHTML = `<span class="terminal-prompt">$</span> ${escapeHtml(command)}`;
+    entry.appendChild(cmdLine);
+
+    const pending = document.createElement('div');
+    pending.className = 'terminal-output terminal-pending';
+    pending.textContent = 'aguardando autorização do cliente...';
+    entry.appendChild(pending);
+
+    stream.appendChild(entry);
+    stream.scrollTop = stream.scrollHeight;
+}
+
+// Fallback for old-style adb_log messages
+function appendTerminal(command, output, isError) {
+    const stream = document.getElementById('terminal-stream');
+    const entry = document.createElement('div');
+    entry.className = 'terminal-entry';
 
     if (command) {
         const cmdLine = document.createElement('div');
         cmdLine.className = 'terminal-cmd';
-        cmdLine.innerHTML = `<span class="terminal-ts">${ts}</span><span class="terminal-prompt">$</span> ${escapeHtml(command)}`;
+        cmdLine.innerHTML = `<span class="terminal-prompt">$</span> ${escapeHtml(command)}`;
         entry.appendChild(cmdLine);
     }
 
     if (output) {
         const outLine = document.createElement('div');
         outLine.className = isError ? 'terminal-output terminal-error' : 'terminal-output';
-        if (!command) {
-            outLine.innerHTML = `<span class="terminal-ts">${ts}</span>${escapeHtml(output)}`;
-            outLine.style.paddingLeft = '0';
-        } else {
-            outLine.textContent = output;
-        }
+        outLine.textContent = output;
         entry.appendChild(outLine);
     }
 
     stream.appendChild(entry);
     stream.scrollTop = stream.scrollHeight;
-
-    // Also feed to hidden activity stream for compatibility
-    const kind = isError ? 'WARNING' : 'COMMAND';
-    appendActivity(kind, command || 'Evento', output || '');
 }
 
 function escapeHtml(text) {

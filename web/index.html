@@ -832,7 +832,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function bootApp() {
     appendActivity('SYSTEM', 'Sistema iniciado', 'Aguardando dispositivo ADB ou sessão ativa.');
-    appendChat('SYSTEM', 'O agente está pronto. Conecte o telefone ou envie uma mensagem.', 'system');
     connectWebSocket();
     refreshDevices();
     refreshAudit();
@@ -1053,8 +1052,29 @@ async function createSession(deviceId) {
     state.sessionActive = true;
     state.currentDevice = deviceId;
     appendActivity('SESSION', 'Sessão aberta', `${state.sessionMode.toUpperCase()} · ${data.sessionId}`);
-    appendChat('AION', `Sessão interna iniciada em modo ${state.sessionMode.toUpperCase()} para ${data.device_info?.displayName || data.device_info?.model || deviceId}.`, 'agent');
     updateSessionChip();
+
+    // Auto-greet: send hidden message so AION introduces itself
+    try {
+        const greetRes = await fetch('/api/chat', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                message: '[SESSAO_INICIADA]',
+                sessionId: state.sessionId,
+                context: {
+                    mode: state.sessionMode,
+                    device: state.currentDevice
+                }
+            })
+        });
+        const greetData = await greetRes.json();
+        if (greetRes.ok && greetData.response) {
+            appendChat('AION', greetData.response, 'agent');
+        }
+    } catch (err) {
+        appendActivity('WARNING', 'Falha na apresentação', err.message);
+    }
 }
 
 async function refreshAudit() {

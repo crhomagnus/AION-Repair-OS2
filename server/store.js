@@ -169,7 +169,7 @@ class SupabaseStore {
     async getSession(id) {
         try {
             const { data, error } = await this._sb
-                .from('sessions')
+                .from('aion_sessions')
                 .select('*')
                 .eq('id', id)
                 .single();
@@ -185,7 +185,7 @@ class SupabaseStore {
         try {
             const row = { id, ...session, updated_at: new Date().toISOString() };
             const { error } = await this._sb
-                .from('sessions')
+                .from('aion_sessions')
                 .upsert(row, { onConflict: 'id' });
             if (error) throw error;
         } catch (err) {
@@ -196,7 +196,7 @@ class SupabaseStore {
     async updateSession(id, updates) {
         try {
             const { data, error } = await this._sb
-                .from('sessions')
+                .from('aion_sessions')
                 .update({ ...updates, updated_at: new Date().toISOString() })
                 .eq('id', id)
                 .select()
@@ -212,7 +212,7 @@ class SupabaseStore {
     async getAllSessions() {
         try {
             const { data, error } = await this._sb
-                .from('sessions')
+                .from('aion_sessions')
                 .select('*')
                 .eq('status', 'open');
             if (error) throw error;
@@ -243,7 +243,7 @@ class SupabaseStore {
                 payload: entry,
                 risk_level: entry.risk_level || null,
             };
-            const { error } = await this._sb.from('audit_logs').insert(row);
+            const { error } = await this._sb.from('aion_audit_logs').insert(row);
             if (error) throw error;
         } catch (err) {
             log.error('appendAudit failed', { error: err.message });
@@ -253,7 +253,7 @@ class SupabaseStore {
     async getRecentAudit(limit = 100) {
         try {
             const { data, error } = await this._sb
-                .from('audit_logs')
+                .from('aion_audit_logs')
                 .select('*')
                 .order('created_at', { ascending: false })
                 .limit(limit);
@@ -268,7 +268,7 @@ class SupabaseStore {
     async getSessionAudit(sessionId) {
         try {
             const { data, error } = await this._sb
-                .from('audit_logs')
+                .from('aion_audit_logs')
                 .select('*')
                 .eq('session_id', sessionId)
                 .order('created_at', { ascending: true });
@@ -285,7 +285,7 @@ class SupabaseStore {
     async saveChatMessage(sessionId, role, content) {
         try {
             const { error } = await this._sb
-                .from('chat_messages')
+                .from('aion_chat_messages')
                 .insert({ session_id: sessionId, role, content });
             if (error) throw error;
         } catch (err) {
@@ -296,7 +296,7 @@ class SupabaseStore {
     async getChatHistory(sessionId, limit = 80) {
         try {
             const { data, error } = await this._sb
-                .from('chat_messages')
+                .from('aion_chat_messages')
                 .select('*')
                 .eq('session_id', sessionId)
                 .order('created_at', { ascending: true })

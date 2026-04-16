@@ -619,6 +619,62 @@ body::after {
     font-style: normal;
 }
 
+.terminal-status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    border-top: 1px solid rgba(93, 129, 255, 0.16);
+    background: rgba(2, 4, 8, 0.95);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+}
+
+.terminal-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+}
+
+.terminal-status.idle {
+    color: var(--muted);
+}
+
+.terminal-status.repair {
+    color: var(--warn);
+}
+
+.terminal-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: var(--accent);
+    animation: blink 1s step-end infinite;
+}
+
+.terminal-status.idle .terminal-cursor {
+    background: var(--muted);
+    animation: none;
+    opacity: 0.4;
+}
+
+.terminal-status.repair .terminal-cursor {
+    background: var(--warn);
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+.terminal-timer {
+    color: var(--muted);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+}
+
 .scrollbar::-webkit-scrollbar,
 .sensor-stream::-webkit-scrollbar,
 .chat-stream::-webkit-scrollbar,
@@ -729,6 +785,13 @@ body::after {
                 <span class="device-bar-text" id="device-bar-text">Aguardando dispositivo</span>
             </div>
             <div id="terminal-stream" class="terminal-stream"></div>
+            <div class="terminal-status-bar">
+                <div class="terminal-status" id="terminal-status">
+                    <span class="terminal-cursor"></span>
+                    <span id="terminal-status-text">aguardando...</span>
+                </div>
+                <div class="terminal-timer" id="terminal-timer">00:00:00</div>
+            </div>
             <div id="activity-stream" class="activity-stream scrollbar" style="display:none"></div>
         </section>
     </main>
@@ -964,15 +1027,17 @@ function handleSocketMessage(message) {
         case 'action_executed':
             break;
         case 'chat_response':
-            // Follow-up response from background skill execution
             if (message.response) {
                 appendChat('AION', message.response, 'agent');
             }
             if (Array.isArray(message.actions) && message.actions.length) {
                 for (const action of message.actions) {
-                    executeAction(action);
+                    if (action && action.command) executeAction(action);
                 }
             }
+            break;
+        case 'phase':
+            updatePhase(message.phase);
             break;
         case 'device_issue': {
             const severityMap = { action_required: 'WARNING', error: 'WARNING', warning: 'WARNING', info: 'SYSTEM' };
@@ -1090,6 +1155,7 @@ async function createSession(deviceId) {
     state.currentDevice = deviceId;
     appendActivity('SESSION', 'Sessão aberta', `${state.sessionMode.toUpperCase()} · ${data.sessionId}`);
     updateSessionChip();
+    startSessionTimer();
 
     // Auto-greet: send hidden message so AION introduces itself
     try {
@@ -1185,6 +1251,7 @@ async function handleChatSubmit(event) {
 
 async function executeAction(action) {
     const command = normalizeAction(action);
+    if (!command) return; // Skip non-command actions (RUN_SKILL etc — handled by backend)
     const risk = (action && action.risk) ? action.risk : getRiskLevel(command);
 
     if (risk === 'HIGH' || risk === 'MEDIUM') {
@@ -1396,6 +1463,39 @@ function appendTerminal(command, output, isError) {
     stream.scrollTop = stream.scrollHeight;
 }
 
+// === Phase indicator (executando diagnóstico / reparo / idle) ===
+function updatePhase(phase) {
+    const statusEl = document.getElementById('terminal-status');
+    const textEl = document.getElementById('terminal-status-text');
+
+    if (phase === 'diagnostic') {
+        statusEl.className = 'terminal-status';
+        textEl.textContent = 'executando diagnóstico...';
+    } else if (phase === 'repair') {
+        statusEl.className = 'terminal-status repair';
+        textEl.textContent = 'executando reparo...';
+    } else {
+        statusEl.className = 'terminal-status idle';
+        textEl.textContent = 'aguardando...';
+    }
+}
+
+// === Session chronometer ===
+let sessionStartTime = null;
+let sessionTimerInterval = null;
+
+function startSessionTimer() {
+    if (sessionTimerInterval) return;
+    sessionStartTime = Date.now();
+    sessionTimerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+        const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+        const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+        const s = String(elapsed % 60).padStart(2, '0');
+        document.getElementById('terminal-timer').textContent = `${h}:${m}:${s}`;
+    }, 1000);
+}
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -1531,6 +1631,8 @@ function normalizeAction(action) {
         if (action.cmd) {
             return `${action.cmd}${action.target ? ` ${action.target}` : ''}`.trim();
         }
+        // Don't stringify objects without command — return empty to skip
+        return '';
     }
     return String(action).trim();
 }

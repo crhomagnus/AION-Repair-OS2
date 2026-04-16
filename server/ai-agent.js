@@ -511,12 +511,14 @@ Cliente: “ja reiniciei e continua travando”
             // The response is returned FIRST so the client sees the explanation immediately
             const executeInBackground = async () => {
                 if (lowRiskActions.length > 0 && this.adb.isConnected()) {
+                    // Broadcast phase indicator
+                    this.broadcast({ type: 'phase', phase: 'diagnostic' });
+
                     console.log(`[AI] Executing ${lowRiskActions.length} action(s) in background...`);
                     const toolResults = await this._executeToolActions(lowRiskActions);
                     const hasResults = toolResults.some(r => !r.pendingFrontend && r.result);
 
                     if (hasResults) {
-                        // Re-call AI with results so it can give an informed follow-up
                         const toolContext = this._buildToolResultsContext(toolResults);
                         history.push({ role: 'user', content: toolContext });
 
@@ -524,14 +526,34 @@ Cliente: “ja reiniciei e continua travando”
                         const followup = this._parseAIResponse(followupRaw);
                         history.push({ role: 'assistant', content: followup.response });
 
-                        // Send follow-up response via WebSocket
+                        // Filter: only send SHELL_SAFE actions with .command to frontend
+                        // Execute RUN_SKILL and other backend actions here
+                        const frontendActions = [];
+                        const backendActions = [];
+                        for (const a of followup.actions) {
+                            if (a.type === 'SHELL_SAFE' && a.command) {
+                                frontendActions.push(a);
+                            } else {
+                                backendActions.push(a);
+                            }
+                        }
+
+                        // Execute backend actions (RUN_SKILL etc)
+                        if (backendActions.length > 0 && this.adb.isConnected()) {
+                            this.broadcast({ type: 'phase', phase: 'repair' });
+                            await this._executeToolActions(backendActions);
+                        }
+
+                        // Send follow-up to client
                         this.broadcast({
                             type: 'chat_response',
                             response: followup.response,
-                            actions: followup.actions,
+                            actions: frontendActions,
                             model: this.model
                         });
                     }
+
+                    this.broadcast({ type: 'phase', phase: 'idle' });
                 }
             };
 

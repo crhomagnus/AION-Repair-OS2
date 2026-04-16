@@ -16,10 +16,11 @@ const DEFAULT_ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-4-6'
 const ANTHROPIC_API_VERSION = '2023-06-01';
 
 class AiAgent {
-    constructor(adb, validator, broadcast) {
+    constructor(adb, validator, broadcast, store) {
         this.adb = adb;
         this.validator = validator;
         this.broadcast = broadcast || (() => {});
+        this.store = store || null;
         this.provider = this._detectProvider();
         this._applyProviderConfig();
         this.histories = new Map();
@@ -292,6 +293,29 @@ Cliente: “ja reiniciei e continua travando”
         return this.histories.get(sid);
     }
 
+    async _loadHistoryFromStore(sessionId) {
+        if (!this.store || !sessionId) return;
+        const sid = sessionId;
+        if (this.histories.has(sid) && this.histories.get(sid).length > 0) return;
+        try {
+            const messages = await this.store.getChatHistory(sid, 80);
+            if (messages && messages.length > 0) {
+                const history = messages.map(m => ({ role: m.role, content: m.content }));
+                this.histories.set(sid, history);
+                console.log(`[AI] Loaded ${history.length} messages from Supabase for session ${sid}`);
+            }
+        } catch (err) {
+            console.error('[AI] Failed to load history from store:', err.message);
+        }
+    }
+
+    async _saveMessage(sessionId, role, content) {
+        if (!this.store || !sessionId) return;
+        this.store.saveChatMessage(sessionId, role, content).catch(err => {
+            console.error('[AI] Failed to save message:', err.message);
+        });
+    }
+
     _parseAIResponse(rawText) {
         const thinkMatch = rawText.match(/<think>([\s\S]*?)<\/think>/);
         const responseMatch = rawText.match(/<response>([\s\S]*?)<\/response>/);
@@ -475,6 +499,9 @@ Cliente: “ja reiniciei e continua travando”
 
     async chat(message, sensorData, context = {}) {
         const sessionId = context.sessionId || null;
+
+        // Load history from Supabase on first call for this session
+        await this._loadHistoryFromStore(sessionId);
         const history = this._getHistory(sessionId);
 
         // Manter no máximo 80 mensagens no histórico (40 turnos)
@@ -483,6 +510,7 @@ Cliente: “ja reiniciei e continua travando”
         }
 
         history.push({ role: 'user', content: message });
+        await this._saveMessage(sessionId, 'user', message);
 
         if (!this.apiKey) {
             throw new Error('AI provider not configured');
@@ -494,6 +522,7 @@ Cliente: “ja reiniciei e continua travando”
             const parsed = this._parseAIResponse(rawResponse);
 
             history.push({ role: 'assistant', content: parsed.response });
+            await this._saveMessage(sessionId, 'assistant', parsed.response);
 
             // STEP 2: If AI didn't request actions for a technical problem, force the skill
             if (parsed.actions.length === 0 && this.adb.isConnected()) {
@@ -517,51 +546,38 @@ Cliente: “ja reiniciei e continua travando”
             // STEP 4: Execute LOW risk actions in background (terminal shows them in real-time)
             // The response is returned FIRST so the client sees the explanation immediately
             const executeInBackground = async () => {
-                if (lowRiskActions.length > 0 && this.adb.isConnected()) {
-                    // Broadcast phase indicator
-                    this.broadcast({ type: 'phase', phase: 'diagnostic' });
+                if (lowRiskActions.length === 0 || !this.adb.isConnected()) return;
 
-                    console.log(`[AI] Executing ${lowRiskActions.length} action(s) in background...`);
-                    const toolResults = await this._executeToolActions(lowRiskActions);
-                    const hasResults = toolResults.some(r => !r.pendingFrontend && r.result);
+                this.broadcast({ type: 'phase', phase: 'diagnostic' });
+                console.log(`[AI] Executing ${lowRiskActions.length} action(s) in background...`);
+                const toolResults = await this._executeToolActions(lowRiskActions);
+                const hasResults = toolResults.some(r => !r.pendingFrontend && r.result);
 
-                    if (hasResults) {
-                        const toolContext = this._buildToolResultsContext(toolResults);
-                        history.push({ role: 'user', content: toolContext });
+                if (hasResults) {
+                    const toolContext = this._buildToolResultsContext(toolResults);
+                    // Don't pollute visible history — use a separate context for the follow-up
+                    const followupHistory = [
+                        ...history.slice(-20),
+                        { role: 'user', content: toolContext }
+                    ];
 
-                        const followupRaw = await this._callAIProvider(toolContext, sensorData, context, history);
-                        const followup = this._parseAIResponse(followupRaw);
-                        history.push({ role: 'assistant', content: followup.response });
+                    const followupRaw = await this._callAIProvider(toolContext, sensorData, context, followupHistory);
+                    const followup = this._parseAIResponse(followupRaw);
 
-                        // Filter: only send SHELL_SAFE actions with .command to frontend
-                        // Execute RUN_SKILL and other backend actions here
-                        const frontendActions = [];
-                        const backendActions = [];
-                        for (const a of followup.actions) {
-                            if (a.type === 'SHELL_SAFE' && a.command) {
-                                frontendActions.push(a);
-                            } else {
-                                backendActions.push(a);
-                            }
-                        }
+                    // Save to persistent history
+                    history.push({ role: 'assistant', content: followup.response });
+                    await this._saveMessage(sessionId, 'assistant', followup.response);
 
-                        // Execute backend actions (RUN_SKILL etc)
-                        if (backendActions.length > 0 && this.adb.isConnected()) {
-                            this.broadcast({ type: 'phase', phase: 'repair' });
-                            await this._executeToolActions(backendActions);
-                        }
-
-                        // Send follow-up to client
-                        this.broadcast({
-                            type: 'chat_response',
-                            response: followup.response,
-                            actions: frontendActions,
-                            model: this.model
-                        });
-                    }
-
-                    this.broadcast({ type: 'phase', phase: 'idle' });
+                    // Send follow-up to client — NO further actions (prevent cascading)
+                    this.broadcast({
+                        type: 'chat_response',
+                        response: followup.response,
+                        actions: [],
+                        model: this.model
+                    });
                 }
+
+                this.broadcast({ type: 'phase', phase: 'idle' });
             };
 
             // Fire and forget — actions run after response is sent

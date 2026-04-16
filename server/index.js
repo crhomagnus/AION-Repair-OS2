@@ -9,7 +9,7 @@ const CmdValidator = require('./cmd-validator');
 const AiAgent = require('./ai-agent');
 const AiExecutor = require('./ai-executor');
 const { createLogger } = require('./logger');
-const Store = require('./store');
+const createStore = require('./store');
 const { version: appVersion } = require('../package.json');
 
 const log = createLogger('server');
@@ -21,11 +21,11 @@ class AIONServer {
         this.wss = new WebSocket.Server({ server: this.server });
         this.clients = new Set();
 
-        this.store = new Store();
+        this.store = createStore();
         this.adb = new AdbBridge();
         this.sensors = new SensorPoller(this.adb);
         this.validator = new CmdValidator();
-        this.ai = new AiAgent(this.adb, this.validator, (msg) => this.broadcast(msg));
+        this.ai = new AiAgent(this.adb, this.validator, (msg) => this.broadcast(msg), this.store);
         this.executor = new AiExecutor(this.sensors, this.validator, this.adb);
 
         this.port = Number(process.env.PORT) || 3001;
@@ -177,7 +177,7 @@ class AIONServer {
                 updated_at: new Date().toISOString()
             };
 
-            this.store.setSession(sessionId, session);
+            await this.store.setSession(sessionId, session);
             this._logAction(sessionId, 'SESSION_CREATED', { mode, consent }, 'LOW');
 
             // Connect device
@@ -193,13 +193,13 @@ class AIONServer {
         });
 
         this.app.get('/api/sessions/:id', (req, res) => {
-            const session = this.store.getSession(req.params.id);
+            const session = await this.store.getSession(req.params.id);
             if (!session) return res.status(404).json({ error: 'Session not found' });
             res.json(session);
         });
 
         this.app.patch('/api/sessions/:id', (req, res) => {
-            const session = this.store.getSession(req.params.id);
+            const session = await this.store.getSession(req.params.id);
             if (!session) return res.status(404).json({ error: 'Session not found' });
 
             if (req.body.mode && !VALID_MODES.includes(req.body.mode)) {
@@ -276,7 +276,7 @@ class AIONServer {
                 return res.status(400).json({ error: 'action_type required' });
             }
 
-            const session = session_id ? this.store.getSession(session_id) : null;
+            const session = session_id ? await this.store.getSession(session_id) : null;
             const riskLevel = this._getRiskLevel(action_type, payload);
 
             // HIGH risk requires explicit session
@@ -350,7 +350,7 @@ class AIONServer {
             
             try {
                 const sensorData = this.sensors.getState();
-                const session = sessionId ? this.store.getSession(sessionId) : null;
+                const session = sessionId ? await this.store.getSession(sessionId) : null;
                 
                 const result = await this.ai.chat(message, sensorData, {
                     session,
@@ -396,11 +396,11 @@ class AIONServer {
         // === AUDIT LOG ===
         this.app.get('/api/audit', (req, res) => {
             const limit = Math.min(parseInt(req.query.limit) || 100, 500);
-            res.json(this.store.getRecentAudit(limit));
+            res.json(await this.store.getRecentAudit(limit));
         });
 
         this.app.get('/api/audit/session/:sessionId', (req, res) => {
-            res.json(this.store.getSessionAudit(req.params.sessionId));
+            res.json(await this.store.getSessionAudit(req.params.sessionId));
         });
 
         // === FORENSIC CAPTURE ===

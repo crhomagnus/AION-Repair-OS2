@@ -1292,17 +1292,7 @@ function appendActivity(kind, title, body) {
     stream.appendChild(item);
     stream.scrollTop = stream.scrollHeight;
 
-    // Mirror system/session/audit events to terminal as subtle event lines
-    const terminalStream = document.getElementById('terminal-stream');
-    if (terminalStream && kind !== 'COMMAND' && kind !== 'WARNING') {
-        const now = new Date();
-        const ts = `[${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}]`;
-        const ev = document.createElement('div');
-        ev.className = 'terminal-event';
-        ev.innerHTML = `<span class="terminal-ts">${ts}</span> ${escapeHtml(title)}`;
-        terminalStream.appendChild(ev);
-        terminalStream.scrollTop = terminalStream.scrollHeight;
-    }
+    // Terminal shows only commands — no system/audit events
 }
 
 // Show command being sent — with "lendo resposta do aparelho..."

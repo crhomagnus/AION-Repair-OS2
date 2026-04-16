@@ -338,7 +338,6 @@ class AIONServer {
 
                 const result = await this.adb.execute(command);
                 this._logAction(sessionId, 'EXECUTE', { command, risk: validation.risk }, validation.risk);
-                this.broadcast({ type: 'adb_log', command, result, risk: validation.risk }, sessionId);
                 res.json({ success: true, result, risk: validation.risk });
             } catch (err) { log.error('Execute failed', { command, error: err.message }); res.status(500).json({ error: 'Command execution failed' }); }
         });

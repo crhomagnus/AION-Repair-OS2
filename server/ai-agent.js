@@ -482,33 +482,22 @@ Cliente: “ja reiniciei e continua travando”
         }
 
         try {
-            // PRE-FLIGHT: Always run the matching skill BEFORE calling the AI
-            // so the AI always has real data to work with
-            let preflightResults = null;
-            if (this.adb.isConnected()) {
-                const requiredSkill = this._detectRequiredSkill(message);
-                if (requiredSkill) {
-                    console.log(`[AI] PRE-FLIGHT: Technical problem detected. Running skill: ${requiredSkill}`);
-                    const skillActions = [{ type: 'RUN_SKILL', skill: requiredSkill }];
-                    preflightResults = await this._executeToolActions(skillActions);
-                    const hasData = preflightResults.some(r => !r.pendingFrontend && r.result);
-                    if (hasData) {
-                        // Inject skill data into user message so the AI sees it immediately
-                        const dataContext = this._buildToolResultsContext(preflightResults);
-                        // Replace the plain user message in history with enriched version
-                        history[history.length - 1] = {
-                            role: 'user',
-                            content: `${message}\n\n${dataContext}`
-                        };
-                        console.log(`[AI] PRE-FLIGHT: Skill ${requiredSkill} data injected into context`);
-                    }
-                }
-            }
-
+            // STEP 1: Call AI — it responds telling the client what it will do
             const rawResponse = await this._callAIProvider(message, sensorData, context, history);
             const parsed = this._parseAIResponse(rawResponse);
 
-            // POST-FLIGHT: If AI requested additional actions (beyond pre-flight), execute them
+            history.push({ role: 'assistant', content: parsed.response });
+
+            // STEP 2: If AI didn't request actions for a technical problem, force the skill
+            if (parsed.actions.length === 0 && this.adb.isConnected()) {
+                const requiredSkill = this._detectRequiredSkill(message);
+                if (requiredSkill) {
+                    console.log(`[AI] HOOK: No actions for technical problem. Adding skill: ${requiredSkill}`);
+                    parsed.actions.push({ type: 'RUN_SKILL', skill: requiredSkill });
+                }
+            }
+
+            // STEP 3: Separate LOW risk (auto-execute) from MEDIUM/HIGH (need confirmation)
             const lowRiskActions = parsed.actions.filter(a => {
                 if (a.type === 'RUN_SKILL') return true;
                 const cmd = this._actionToCommand(a);
@@ -516,47 +505,45 @@ Cliente: “ja reiniciei e continua travando”
                 const v = this.validator.validateWithRisk(cmd);
                 return v.allowed && v.risk === 'LOW';
             });
-            const nonLowActions = parsed.actions.filter(a => !lowRiskActions.includes(a));
+            const confirmActions = parsed.actions.filter(a => !lowRiskActions.includes(a));
 
-            if (lowRiskActions.length > 0 && this.adb.isConnected()) {
-                console.log(`[AI] POST-FLIGHT: Executing ${lowRiskActions.length} additional action(s)...`);
-                const toolResults = await this._executeToolActions(lowRiskActions);
-                const hasResults = toolResults.some(r => !r.pendingFrontend && r.result);
+            // STEP 4: Execute LOW risk actions in background (terminal shows them in real-time)
+            // The response is returned FIRST so the client sees the explanation immediately
+            const executeInBackground = async () => {
+                if (lowRiskActions.length > 0 && this.adb.isConnected()) {
+                    console.log(`[AI] Executing ${lowRiskActions.length} action(s) in background...`);
+                    const toolResults = await this._executeToolActions(lowRiskActions);
+                    const hasResults = toolResults.some(r => !r.pendingFrontend && r.result);
 
-                if (hasResults) {
-                    const toolContext = this._buildToolResultsContext(toolResults);
-                    history.push({ role: 'assistant', content: parsed.response });
-                    history.push({ role: 'user', content: toolContext });
+                    if (hasResults) {
+                        // Re-call AI with results so it can give an informed follow-up
+                        const toolContext = this._buildToolResultsContext(toolResults);
+                        history.push({ role: 'user', content: toolContext });
 
-                    const followupRaw = await this._callAIProvider(toolContext, sensorData, context, history);
-                    const followup = this._parseAIResponse(followupRaw);
-                    if (followup.actions.length > 0) {
-                        console.log(`[AI] POST-FLIGHT followup: ${followup.actions.length} more action(s):`, JSON.stringify(followup.actions.map(a => ({ type: a.type, cmd: a.command, skill: a.skill }))));
+                        const followupRaw = await this._callAIProvider(toolContext, sensorData, context, history);
+                        const followup = this._parseAIResponse(followupRaw);
+                        history.push({ role: 'assistant', content: followup.response });
+
+                        // Send follow-up response via WebSocket
+                        this.broadcast({
+                            type: 'chat_response',
+                            response: followup.response,
+                            actions: followup.actions,
+                            model: this.model
+                        });
                     }
-
-                    history.splice(-2, 2);
-                    history.push({ role: 'assistant', content: followup.response });
-
-                    const allExecuted = preflightResults
-                        ? [...preflightResults, ...toolResults]
-                        : toolResults;
-
-                    return {
-                        success: true,
-                        response: followup.response,
-                        actions: [...nonLowActions, ...followup.actions],
-                        executedActions: allExecuted,
-                        model: this.model
-                    };
                 }
-            }
+            };
 
-            history.push({ role: 'assistant', content: parsed.response });
+            // Fire and forget — actions run after response is sent
+            executeInBackground().catch(err => {
+                console.error('[AI] Background execution error:', err.message);
+            });
+
             return {
                 success: true,
                 response: parsed.response,
-                actions: parsed.actions,
-                executedActions: preflightResults || [],
+                actions: confirmActions, // Only MEDIUM/HIGH actions that need confirmation
                 model: this.model
             };
         } catch (err) {

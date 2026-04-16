@@ -964,7 +964,15 @@ function handleSocketMessage(message) {
         case 'action_executed':
             break;
         case 'chat_response':
-            // Chat replies are handled by the REST flow to keep the stream ordered.
+            // Follow-up response from background skill execution
+            if (message.response) {
+                appendChat('AION', message.response, 'agent');
+            }
+            if (Array.isArray(message.actions) && message.actions.length) {
+                for (const action of message.actions) {
+                    executeAction(action);
+                }
+            }
             break;
         case 'device_issue': {
             const severityMap = { action_required: 'WARNING', error: 'WARNING', warning: 'WARNING', info: 'SYSTEM' };

@@ -192,13 +192,13 @@ class AIONServer {
             res.status(201).json({ sessionId, ...session });
         });
 
-        this.app.get('/api/sessions/:id', (req, res) => {
+        this.app.get('/api/sessions/:id', async (req, res) => {
             const session = await this.store.getSession(req.params.id);
             if (!session) return res.status(404).json({ error: 'Session not found' });
             res.json(session);
         });
 
-        this.app.patch('/api/sessions/:id', (req, res) => {
+        this.app.patch('/api/sessions/:id', async (req, res) => {
             const session = await this.store.getSession(req.params.id);
             if (!session) return res.status(404).json({ error: 'Session not found' });
 
@@ -394,12 +394,12 @@ class AIONServer {
         });
 
         // === AUDIT LOG ===
-        this.app.get('/api/audit', (req, res) => {
+        this.app.get('/api/audit', async (req, res) => {
             const limit = Math.min(parseInt(req.query.limit) || 100, 500);
             res.json(await this.store.getRecentAudit(limit));
         });
 
-        this.app.get('/api/audit/session/:sessionId', (req, res) => {
+        this.app.get('/api/audit/session/:sessionId', async (req, res) => {
             res.json(await this.store.getSessionAudit(req.params.sessionId));
         });
 

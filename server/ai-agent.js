@@ -85,59 +85,23 @@ Forense: LOG_COLLECTION, FORENSIC_SNAPSHOT, FORENSIC_ARTIFACTS, FORENSIC_CHAIN
 </ferramentas>
 
 <comunicacao>
-REGRAS DE COMUNICACAO — OBRIGATORIAS
+REGRA SIMPLES DE EXECUCAO:
 
-O cliente ve DUAS coisas na tela: o chat (conversa) e o terminal (comandos rodando em tempo real).
-Sua resposta aparece no chat. Os comandos que voce executa aparecem no terminal automaticamente.
-O cliente acompanha os dois ao mesmo tempo.
+1. EXECUTE TUDO AUTOMATICAMENTE. Diagnostico, leitura, modificacao, reparo — tudo executa sem pedir permissao. Voce e o tecnico. Trabalhe.
 
-REGRA 1 — SEMPRE DIGA O QUE VAI FAZER ANTES DE FAZER
-Antes de executar qualquer diagnostico ou acao, diga ao cliente em uma frase curta e objetiva o que vai fazer.
-Exemplos:
-- "Vou verificar o estado da bateria e o consumo de energia."
-- "Vou analisar os apps instalados pra encontrar a fonte das propagandas."
-- "Vou checar a temperatura e os processos que estao consumindo mais CPU."
-O cliente precisa saber o que esta acontecendo. Enquanto voce fala, os comandos vao aparecendo no terminal.
+2. UNICA EXCECAO: COMANDOS DESTRUTIVOS. Reboot, factory reset, wipe, rm -rf, dd, formatacao. SOMENTE nesses casos:
+   - Explique o que o comando faz em UMA frase
+   - Diga o risco (ex: "todos os apps abertos vao fechar" ou "todos os dados serao apagados")
+   - Diga EXATAMENTE o que o cliente deve digitar: "Digite OK para autorizar"
+   - Espere a resposta. Se o cliente autorizar, execute. Se recusar, siga com alternativas.
 
-REGRA 2 — FRASES CURTAS E OBJETIVAS
-Nada de textos longos. O cliente esta ali pra resolver um problema, nao pra ler um manual.
-Maximo 3 frases por resposta. Direto ao ponto.
+3. FRASES CURTAS. Maximo 3 frases por resposta. Sem enrolacao.
 
-REGRA 3 — COMANDOS DE LEITURA: EXECUTE LIVREMENTE E SEM ESPERAR
-Comandos de diagnostico (dumpsys, getprop, cat /proc, ps, logcat, pm list, df, etc) NAO precisam de autorizacao.
-Execute automaticamente. Eles aparecem no terminal em tempo real pro cliente acompanhar.
-NAO espere o cliente dizer "ok" entre cada etapa de diagnostico. Voce e o tecnico — investigue ate encontrar a resposta.
-Se um comando nao retornou os dados que voce precisava, use outro comando imediatamente nas actions. Nao pergunte "posso continuar?" pra leitura — continue.
+4. DIGA O QUE ESTA FAZENDO. Antes de cada etapa, uma frase: "Vou analisar os processos." / "Vou desativar o WiFi." / "Vou remover o app X." Depois execute.
 
-REGRA 4 — COMANDOS DE MODIFICACAO: EXPLIQUE E PERGUNTE "POSSO SEGUIR?"
-Para qualquer comando que modifica o aparelho (desinstalar app, limpar cache, mudar configuracao, etc):
-1. Explique em UMA frase o que vai fazer e por que
-2. Pergunte "Posso seguir?"
-3. Se o cliente disser sim → execute
-4. Se o cliente disser nao → tranquilize-o, explique que nao ha risco serio, e pergunte se tem alguma duvida
+5. NAO ESPERE "OK" ENTRE CADA PASSO. Voce e autonomo. Investigue, execute, resolva. O cliente ve os comandos no terminal em tempo real.
 
-Exemplos:
-- "Encontrei o app 'SuperCleaner' gerando propagandas. Preciso remover ele do celular. Posso seguir?"
-- "Vou limpar o cache do app que esta travando. Nenhum dado pessoal sera perdido. Posso seguir?"
-
-REGRA 5 — COMANDOS DESTRUTIVOS: EXPLIQUE O RISCO E PERGUNTE
-Para reboot, factory reset, formatacao, ou qualquer acao irreversivel:
-1. Explique o que vai fazer
-2. Explique o risco de forma simples (sem alarmar)
-3. Pergunte "Posso seguir?"
-4. Se o cliente perguntar sobre o risco, explique com calma que na maioria dos casos nao e grave
-
-Exemplo: "Pra aplicar essa correcao, preciso reiniciar o aparelho. Todos os apps abertos vao fechar, mas nenhum dado e perdido. Posso seguir?"
-
-REGRA 6 — NUNCA SE REAPRESENTE
-Voce se apresenta UMA VEZ no inicio (PASSO 0). Depois disso, NUNCA mais diga "sou o AION" ou pergunte o nome do cliente novamente.
-Se o cliente ja disse o nome dele, USE-O nas respostas. Se voce esqueceu, releia o historico — o nome esta la.
-
-REGRA 7 — SE O CLIENTE RECUSAR
-Nao insista. Explique calmamente:
-- "Sem problema. Esse procedimento e seguro, mas entendo a preocupacao. Se mudar de ideia, me avise."
-- Ofereca uma alternativa se existir
-- Continue o diagnostico normalmente com outros passos
+6. NUNCA SE REAPRESENTE. Uma vez so. Use o nome do cliente nas respostas.
 </comunicacao>
 
 <protocolo>
@@ -460,10 +424,10 @@ Cliente: “ja reiniciei e continua travando”
                 results.push({ type: action.type, result: `Comando bloqueado: ${validation.reason}`, error: true });
                 continue;
             }
-            if (validation.risk !== 'LOW') {
-                // MEDIUM/HIGH: don't auto-execute, return to frontend for confirmation
-                this.broadcast({ type: 'cmd_pending', command: cmd, risk: validation.risk });
-                results.push({ type: action.type, command: cmd, result: null, risk: validation.risk, reason: action.reason || validation.reason, pendingFrontend: true });
+            if (validation.risk === 'HIGH') {
+                // HIGH only: destructive commands need explicit user confirmation
+                this.broadcast({ type: 'cmd_pending', command: cmd, risk: 'HIGH' });
+                results.push({ type: action.type, command: cmd, result: null, risk: 'HIGH', reason: action.reason || validation.reason, pendingFrontend: true });
                 continue;
             }
             // LOW risk: broadcast start, execute, broadcast result
@@ -493,7 +457,7 @@ Cliente: “ja reiniciei e continua travando”
         }
         parts.push('[/RESULTADOS]');
         parts.push('Agora responda ao cliente com base nesses dados reais. Nao invente dados alem do que foi retornado. Use o formato <think><response><actions>.');
-        parts.push('IMPORTANTE: Voce JA se apresentou e JA sabe o nome do cliente. NAO se apresente novamente. NAO pergunte o nome novamente. Continue a conversa naturalmente.');
+        parts.push('IMPORTANTE: Voce JA se apresentou e JA sabe o nome do cliente. NAO se apresente novamente. NAO pergunte o nome novamente. NAO repita o que voce ja disse na mensagem anterior. Responda apenas com informacoes NOVAS baseadas nos dados acima. Continue a conversa naturalmente.');
         return parts.join('\n');
     }
 
@@ -533,24 +497,24 @@ Cliente: “ja reiniciei e continua travando”
                 }
             }
 
-            // STEP 3: Separate LOW risk (auto-execute) from MEDIUM/HIGH (need confirmation)
-            const lowRiskActions = parsed.actions.filter(a => {
+            // STEP 3: Separate auto-execute from HIGH risk (only HIGH needs confirmation)
+            const autoActions = parsed.actions.filter(a => {
                 if (a.type === 'RUN_SKILL') return true;
                 const cmd = this._actionToCommand(a);
                 if (!cmd) return false;
                 const v = this.validator.validateWithRisk(cmd);
-                return v.allowed && v.risk === 'LOW';
+                return v.allowed && v.risk !== 'HIGH';
             });
-            const confirmActions = parsed.actions.filter(a => !lowRiskActions.includes(a));
+            const confirmActions = parsed.actions.filter(a => !autoActions.includes(a));
 
             // STEP 4: Execute LOW risk actions in background (terminal shows them in real-time)
             // The response is returned FIRST so the client sees the explanation immediately
             const executeInBackground = async () => {
-                if (lowRiskActions.length === 0 || !this.adb.isConnected()) return;
+                if (autoActions.length === 0 || !this.adb.isConnected()) return;
 
                 this.broadcast({ type: 'phase', phase: 'diagnostic' });
-                console.log(`[AI] Executing ${lowRiskActions.length} action(s) in background...`);
-                const toolResults = await this._executeToolActions(lowRiskActions);
+                console.log(`[AI] Executing ${autoActions.length} action(s) in background...`);
+                const toolResults = await this._executeToolActions(autoActions);
                 const hasResults = toolResults.some(r => !r.pendingFrontend && r.result);
 
                 if (hasResults) {

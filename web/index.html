@@ -1251,16 +1251,17 @@ async function handleChatSubmit(event) {
 
 async function executeAction(action) {
     const command = normalizeAction(action);
-    if (!command) return; // Skip non-command actions (RUN_SKILL etc — handled by backend)
+    if (!command) return;
     const risk = (action && action.risk) ? action.risk : getRiskLevel(command);
 
-    if (risk === 'HIGH' || risk === 'MEDIUM') {
+    if (risk === 'HIGH') {
+        // Only truly destructive commands need confirmation
         state.pendingAction = command;
-        setComposerHint('O agente solicitou autorização. Digite "confirmar" ou "cancelar".');
-        // Don't add another chat bubble — the AI already explained in its response
+        setComposerHint('Comando destrutivo pendente. Digite "ok" para autorizar ou "cancelar".');
         return;
     }
 
+    // Everything else executes automatically
     await performAction(command, risk);
 }
 
@@ -1650,11 +1651,11 @@ function getRiskLevel(command) {
 }
 
 function isConfirmationMessage(text) {
-    return /^(confirmar|confirmo|vai|executar|sim|prosseguir|liberar)$/i.test(text.trim());
+    return /^(ok|sim|confirmar|confirmo|vai|executar|prosseguir|liberar|pode|faz|manda|segue|bora|go|yes|pode seguir|pode sim|manda ver|vai la|tudo bem|beleza|blz|show|feito)$/i.test(text.trim());
 }
 
 function isCancellationMessage(text) {
-    return /^(cancelar|cancela|nao|não|stop|parar|abort)$/i.test(text.trim());
+    return /^(nao|não|cancelar|cancela|stop|parar|abort|para|espera|nope|no|nem|deixa|nao faz|nao pode|melhor nao)$/i.test(text.trim());
 }
 
 function tonePercent(value, warnThreshold, dangerThreshold) {

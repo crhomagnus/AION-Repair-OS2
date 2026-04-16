@@ -477,10 +477,9 @@ Cliente: “ja reiniciei e continua travando”
         const sessionId = context.sessionId || null;
         const history = this._getHistory(sessionId);
 
-        // Manter no máximo 20 mensagens no histórico (10 turnos)
-        // Important: keep enough context so the AI remembers the client's name and conversation
-        if (history.length > 20) {
-            history.splice(0, history.length - 20);
+        // Manter no máximo 80 mensagens no histórico (40 turnos)
+        if (history.length > 80) {
+            history.splice(0, history.length - 80);
         }
 
         history.push({ role: 'user', content: message });
@@ -706,7 +705,7 @@ Cliente: “ja reiniciei e continua travando”
     }
 
     async _callAnthropic(systemContent, history) {
-        const messages = history.slice(-12).map(m => ({
+        const messages = history.slice(-40).map(m => ({
             role: m.role,
             content: m.content
         }));
@@ -772,7 +771,7 @@ Cliente: “ja reiniciei e continua travando”
     async _callOpenAICompatible(systemContent, history) {
         const messages = [
             { role: 'system', content: systemContent },
-            ...history.slice(-12)
+            ...history.slice(-40)
         ];
 
         const body = {

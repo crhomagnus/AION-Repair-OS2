@@ -1302,13 +1302,18 @@ async function handleChatSubmit(event) {
 
 async function executeAction(action) {
     const command = normalizeAction(action);
-    const risk = getRiskLevel(command);
+    // Use backend-provided risk level if available, otherwise infer locally
+    const risk = (action && action.risk) ? action.risk : getRiskLevel(command);
+    const reason = (action && action.riskReason) ? action.riskReason : '';
+    const actionReason = (action && action.reason) ? action.reason : '';
 
-    if (risk === 'HIGH') {
+    if (risk === 'HIGH' || risk === 'MEDIUM') {
         state.pendingAction = command;
-        setComposerHint(`Ação de alto risco pendente: digite "confirmar" para executar ${command}.`);
-        appendActivity('WARNING', 'Ação de alto risco aguardando confirmação', command);
-        appendChat('AION', `Detectei uma ação de alto risco: \`${command}\`\nDigite "confirmar" ou "cancelar" para continuar.`, 'system');
+        const riskLabel = risk === 'HIGH' ? 'alto risco' : 'risco médio';
+        const explanation = actionReason || reason || command;
+        setComposerHint(`Ação de ${riskLabel} pendente: digite "confirmar" para executar.`);
+        appendActivity('WARNING', `Ação de ${riskLabel} aguardando confirmação`, command);
+        appendChat('AION', `Preciso de autorização para executar:\n\n\`${command}\`\n\n${actionReason ? 'Motivo: ' + actionReason + '\n\n' : ''}Digite "confirmar" ou "cancelar".`, 'system');
         return;
     }
 

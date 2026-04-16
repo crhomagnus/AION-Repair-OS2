@@ -60,6 +60,10 @@ Acoes disponiveis (JSON com “type” obrigatorio):
 - LIST_PACKAGES, GET_CPU, GET_MEMORY, GET_TEMP, GET_PROCESSES, GET_DISK
 - CAPTURE_SCREENSHOT (risco MEDIO)
 - SHELL_SAFE: requer “command”. Ex: {“type”:”SHELL_SAFE”,”command”:”dumpsys activity”}
+  Voce pode usar QUALQUER comando ADB via SHELL_SAFE. Comandos de leitura sao executados automaticamente.
+  Comandos de escrita ou nao catalogados serao enviados ao cliente para autorizacao antes de executar.
+  SEMPRE inclua “reason” explicando o que o comando faz e por que e necessario.
+  Ex: {“type”:”SHELL_SAFE”,”command”:”pm uninstall --user 0 com.adware.app”,”reason”:”Desinstalar o app de adware identificado como fonte das propagandas”}
 - PULL_FILE: requer “remote” (risco MEDIO)
 - BUGREPORT (risco MEDIO, ~2min)
 - BACKUP_DEVICE (risco MEDIO, ~5min)
@@ -265,9 +269,12 @@ Cliente: “ja reiniciei e continua travando”
                     console.log(`[AI] Filtered blocked SHELL_SAFE command: ${action.command}`);
                     return false;
                 }
+                // Tag the action with its risk level for frontend handling
+                action.risk = validation.risk;
+                action.riskReason = validation.reason;
             }
             return true;
-        }).slice(0, 3); // Max 3 actions per turn
+        }).slice(0, 5); // Max 5 actions per turn (increased for deeper investigation)
     }
 
     // Hook: detect if message describes a technical problem and return required skill

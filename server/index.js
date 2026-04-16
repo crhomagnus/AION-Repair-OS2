@@ -321,26 +321,19 @@ class AIONServer {
                 }
                 
                 const validation = this.validator.validateWithRisk(command);
-                
+
                 if (!validation.allowed) {
-                    this._logAction(sessionId, 'BLOCKED', { command, reason: 'Policy denied' }, 'HIGH');
-                    return res.status(403).json({ 
-                        error: 'Command blocked by policy', 
+                    this._logAction(sessionId, 'BLOCKED', { command, reason: validation.reason }, 'HIGH');
+                    return res.status(403).json({
+                        error: 'Comando inválido',
                         command,
                         reason: validation.reason
                     });
                 }
 
-                // Check session mode for HIGH risk commands
-                if (validation.risk === 'HIGH' && sessionId) {
-                    const session = this.store.getSession(sessionId);
-                    if (!session || session.mode === 'diagnostic') {
-                        return res.status(403).json({ 
-                            error: 'Command requires REPAIR or FORENSIC session mode',
-                            command,
-                            currentMode: session?.mode || 'none'
-                        });
-                    }
+                // Log risk level for audit trail
+                if (validation.risk === 'HIGH' || validation.risk === 'MEDIUM') {
+                    log.info('Executing user-confirmed command', { command, risk: validation.risk });
                 }
 
                 const result = await this.adb.execute(command);

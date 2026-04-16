@@ -9,7 +9,7 @@ const AUDIT_FILE = path.join(DATA_DIR, 'audit.jsonl');
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
 const MAX_AUDIT_LINES = Number(process.env.MAX_AUDIT_LINES || 5000);
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://twllrnhqsyowdxegpvai.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://kgsdwsdoynjraubpnqwd.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 
 // ---------------------------------------------------------------------------

@@ -359,7 +359,6 @@ class AIONServer {
                     device: context?.device || this.adb.deviceInfo || null
                 });
 
-                this.broadcast({ type: 'chat_response', ...result }, sessionId);
                 res.json({
                     ...result,
                     sessionId,
@@ -588,11 +587,16 @@ class AIONServer {
     broadcast(msg, sessionId = null) {
         const payload = JSON.stringify(msg);
         const isGlobal = !sessionId || ['telemetry', 'device_connected', 'device_disconnected', 'device_issue'].includes(msg.type);
+        let sent = 0;
         for (const client of this.clients) {
             if (client.readyState !== WebSocket.OPEN) continue;
             if (isGlobal || client._aionSessionId === sessionId) {
                 client.send(payload);
+                sent++;
             }
+        }
+        if (msg.type === 'chat_response') {
+            console.log(`[WS] Broadcast chat_response to ${sent}/${this.clients.size} clients`);
         }
     }
 

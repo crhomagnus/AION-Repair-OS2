@@ -845,6 +845,7 @@ const state = {
         memory: 0
     },
     auditSeen: new Set(),
+    knownDevices: new Set(),
     apiToken: localStorage.getItem('aion_token') || null
 };
 
@@ -992,10 +993,13 @@ function handleSocketMessage(message) {
             applyDeviceInfo(message.device);
             appendActivity('SESSION', 'Dispositivo conectado', describeDevice(message.device));
             setBrandSubtitle(`Dispositivo ativo: ${message.device.displayName || message.device.model || message.device.id}`);
-            // Auto-create session if not active
+            // Auto-create session if not active.
+            // Set bootstrapLock SYNCHRONOUSLY before the async call to prevent
+            // the 3-second polling (refreshDevices) from racing into createSession.
             if (!state.sessionActive && !state.bootstrapLock) {
                 state.bootstrapLock = true;
-                createSession(message.device.id)
+                const isReconnect = state.knownDevices.has(message.device.id);
+                createSession(message.device.id, isReconnect)
                     .catch(err => appendActivity('WARNING', 'Sessão automática falhou', err.message))
                     .finally(() => { state.bootstrapLock = false; });
             }
@@ -1003,14 +1007,16 @@ function handleSocketMessage(message) {
         case 'device_disconnected':
             appendActivity('SESSION', 'Dispositivo desconectado', `ID: ${message.deviceId}`);
             appendTerminal('', `Dispositivo desconectado: ${message.deviceId}`, 'LOW', true);
+            // Preserve sessionId so we can reuse it on reconnect (memory continuity)
+            state.previousSessionId = state.sessionId;
+            state.previousDevice = state.currentDevice;
             state.currentDevice = null;
             state.deviceInfo = null;
-            state.sessionId = null;
             state.sessionActive = false;
-            setSessionChip('Sessão inativa');
+            setSessionChip('Reconectando...');
             updateDeviceBar(null);
             updateDeviceChip([]);
-            setBrandSubtitle('Aguardando um telefone USB autorizado no ADB.');
+            setBrandSubtitle('Dispositivo desconectado — aguardando reconexão...');
             break;
         case 'adb_log':
             appendTerminal(message.command, message.result || '');
@@ -1088,7 +1094,8 @@ async function refreshDevices() {
         if (!state.sessionActive) {
             state.bootstrapLock = true;
             try {
-                await createSession(device.id);
+                const isReconnect = state.knownDevices.has(device.id);
+                await createSession(device.id, isReconnect);
                 setBrandSubtitle(`Dispositivo ativo: ${status.device.displayName || device.id}`);
             } catch (err) {
                 appendActivity('WARNING', 'Sessão falhou', err.message);
@@ -1102,7 +1109,8 @@ async function refreshDevices() {
     state.bootstrapLock = true;
     try {
         await connectDevice(device.id);
-        await createSession(device.id);
+        const isReconnect = state.knownDevices.has(device.id);
+        await createSession(device.id, isReconnect);
         setBrandSubtitle(`Dispositivo ativo: ${state.deviceInfo?.displayName || device.id}`);
     } catch (err) {
         appendActivity('WARNING', 'Bootstrap falhou', err.message);
@@ -1128,7 +1136,56 @@ async function connectDevice(deviceId) {
     appendActivity('SESSION', 'ADB conectado', describeDevice(data.device));
 }
 
-async function createSession(deviceId) {
+async function createSession(deviceId, isReconnect = false) {
+    // Hard guard: if bootstrapLock is already set by someone else, bail out.
+    // This makes createSession safe against any concurrent entry point.
+    if (state.bootstrapLock && !isReconnect && state.sessionActive) return;
+
+    // RECONNECT: reuse previous session to preserve AI memory
+    if (isReconnect && state.previousSessionId && state.previousDevice === deviceId) {
+        state.sessionId = state.previousSessionId;
+        state.sessionActive = true;
+        state.currentDevice = deviceId;
+        state.sessionMode = state.sessionMode || 'repair';
+        appendActivity('SESSION', 'Sessão retomada', `${state.sessionMode.toUpperCase()} · ${state.sessionId}`);
+        updateSessionChip();
+
+        // Reopen session on backend
+        try {
+            await fetch(`/api/sessions/${state.sessionId}`, {
+                method: 'PATCH',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ status: 'open' })
+            });
+        } catch (err) {
+            appendActivity('WARNING', 'Falha ao reabrir sessão', err.message);
+        }
+
+        // Notify AI of reconnection using the SAME session
+        try {
+            const greetRes = await fetch('/api/chat', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    message: '[DISPOSITIVO_RECONECTADO]',
+                    sessionId: state.sessionId,
+                    context: {
+                        mode: state.sessionMode,
+                        device: state.currentDevice
+                    }
+                })
+            });
+            const greetData = await greetRes.json();
+            if (greetRes.ok && greetData.response) {
+                appendChat('AION', greetData.response, 'agent');
+            }
+        } catch (err) {
+            appendActivity('WARNING', 'Falha na reconexão', err.message);
+        }
+        return;
+    }
+
+    // NEW SESSION: first time connecting this device
     const response = await fetch('/api/sessions', {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -1153,11 +1210,12 @@ async function createSession(deviceId) {
     state.sessionMode = data.mode || 'repair';
     state.sessionActive = true;
     state.currentDevice = deviceId;
+    state.knownDevices.add(deviceId);
     appendActivity('SESSION', 'Sessão aberta', `${state.sessionMode.toUpperCase()} · ${data.sessionId}`);
     updateSessionChip();
     startSessionTimer();
 
-    // Auto-greet: send hidden message so AION introduces itself
+    // Auto-greet: AION introduces itself
     try {
         const greetRes = await fetch('/api/chat', {
             method: 'POST',
@@ -1253,15 +1311,7 @@ async function executeAction(action) {
     const command = normalizeAction(action);
     if (!command) return;
     const risk = (action && action.risk) ? action.risk : getRiskLevel(command);
-
-    if (risk === 'HIGH') {
-        // Only truly destructive commands need confirmation
-        state.pendingAction = command;
-        setComposerHint('Comando destrutivo pendente. Digite "ok" para autorizar ou "cancelar".');
-        return;
-    }
-
-    // Everything else executes automatically
+    // All commands execute automatically — agent is fully autonomous
     await performAction(command, risk);
 }
 
@@ -1471,13 +1521,13 @@ function updatePhase(phase) {
 
     if (phase === 'diagnostic') {
         statusEl.className = 'terminal-status';
-        textEl.textContent = 'executando diagnóstico...';
+        textEl.textContent = 'investigando...';
     } else if (phase === 'repair') {
         statusEl.className = 'terminal-status repair';
         textEl.textContent = 'executando reparo...';
     } else {
-        statusEl.className = 'terminal-status idle';
-        textEl.textContent = 'aguardando...';
+        statusEl.className = 'terminal-status';
+        textEl.textContent = 'pronto';
     }
 }
 
